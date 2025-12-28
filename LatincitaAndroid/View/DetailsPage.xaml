@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+	x:Class="LatincitaAndroid.DetailsPage"
+	xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+	xmlns:viewmodel="clr-namespace:LatincitaAndroid.ViewModel"
+        xmlns:model="clr-namespace:LatincitaAndroid.Model"
+	x:DataType="viewmodel:RadioProgramDetailsViewModel"
+        xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit">
+
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="*,Auto"
+                      VerticalOptions="Center">
+
+            <!-- Left title -->
+            <Label
+                        Text="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}"
+                        Margin="10,0,0,0"
+                        FontSize="Title"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        VerticalOptions="Center" />
+
+            <!-- Right text -->
+            <Label
+                        Grid.Column="1"
+                        Margin="0,0,10,0"
+                        Text="{Binding ProgramListService.Id, TargetNullValue='—'}"
+                        FontSize="Title"
+                        TextColor="White"
+                        VerticalOptions="Center"
+                        HorizontalOptions="End" />
+        </Grid>
+    </Shell.TitleView>
+
+
+    <Grid
+	BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground},
+		                            Dark={StaticResource DarkBackground}}"
+	ColumnDefinitions="*,*"
+	ColumnSpacing="5"
+	RowDefinitions="*,Auto,Auto"
+	RowSpacing="5"
+        Padding="0,10,0,0">
+
+        <RefreshView
+                    Grid.Row="0"
+                    Grid.ColumnSpan="2"
+		    Command="{Binding GetRandomCommand}"
+		    IsRefreshing="{Binding IsRefreshing}">
+            <Grid RowDefinitions="Auto,Auto,Auto,*">
+                <!-- Row 0:  image -->
+                <!-- Row 1:  detail-list -->
+                <!-- Row 2:  media-element -->
+                <!-- Row 3:  track-list -->
+                <BoxView
+			Margin="10,0,10,0"
+		        Grid.RowSpan="2"
+		        BackgroundColor="{StaticResource Primary}"
+                        CornerRadius="10"
+                        MaximumWidthRequest="740"
+		        VerticalOptions="Fill" />
+
+		<Border
+			Margin="0,8,0,0"
+			HeightRequest="172"
+			HorizontalOptions="Center"
+			Stroke="White"
+			StrokeShape="RoundRectangle 80"
+			StrokeThickness="6"
+			VerticalOptions="Center"
+			WidthRequest="172">
+		    <Image
+			    Aspect="AspectFill"
+			    HeightRequest="160"
+			    HorizontalOptions="Center"
+			    Source="{Binding ProgramListService.CurrentRadioProgram.PictureURL}"
+			    VerticalOptions="Center"
+			    WidthRequest="160" />
+		</Border>
+
+
+                <!-- Put the three detail lines into a single visible row -->
+                <VerticalStackLayout Grid.Row="1" Padding="0" Spacing="0" HorizontalOptions="Center">
+                    <Label
+			    Margin="0,0,0,8"
+			    FontAttributes="Bold"
+			    HorizontalOptions="Center"
+			    Style="{StaticResource LargeLabel}"
+			    Text="{Binding ProgramListService.Detail_line_1}"
+                            IsVisible="{Binding ProgramListService.HasLine1}" 
+			    TextColor="White" />
+                    <Label
+			    Margin="0,0,0,8"
+			    FontAttributes="Bold"
+			    HorizontalOptions="Center"
+			    Style="{StaticResource LargeLabel}"
+			    Text="{Binding ProgramListService.Detail_line_2}"
+                            IsVisible="{Binding ProgramListService.HasLine2}" 
+			    TextColor="White" />
+                    <Label
+			    Margin="0,0,0,8"
+			    FontAttributes="Bold"
+			    HorizontalOptions="Center"
+			    Style="{StaticResource LargeLabel}"
+			    Text="{Binding ProgramListService.Detail_line_3}"
+                            IsVisible="{Binding ProgramListService.HasLine3}" 
+			    TextColor="White" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout
+				Grid.Row="2"
+				Padding="10"
+				Spacing="10">
+                    <toolkit:MediaElement Source="{Binding ProgramListService.Mp3}">
+                                </toolkit:MediaElement>
+
+                    <!--<Label Style="{StaticResource SmallLabel}" Text="{Binding ProgramListService.Mp3}" HorizontalTextAlignment="Center" />-->
+		</VerticalStackLayout>
+
+                <CollectionView
+			Grid.Row="3"
+			Margin="10,0,10,0"
+                        MaximumWidthRequest="740"
+                        ItemsSource="{Binding ProgramListService.CurrentTrackList}"
+                        SelectionMode="None">
+
+                    <!-- Optional header -->
+                    <CollectionView.Header>
+                        <Grid ColumnDefinitions="60,*"
+                              Padding="8"
+                              BackgroundColor="{StaticResource Gray200}">
+                            <Label Text="Start"
+                                   HorizontalTextAlignment="Start"
+                                   FontAttributes="Bold" />
+                            <Label Grid.Column="1"
+                                   Text="Title"
+                                   FontAttributes="Bold" />
+                        </Grid>
+                    </CollectionView.Header>
+
+                    <!-- Row template -->
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="model:TrackObject">
+                            <Grid ColumnDefinitions="60,*"
+                                  Padding="0"
+                                  ColumnSpacing="12">
+                                <Label
+                                    Text="{Binding start_time}"
+                                    VerticalOptions="Center"
+                                    HorizontalTextAlignment="Start" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding article_title}"
+                                    LineBreakMode="TailTruncation"
+                                    VerticalOptions="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+        </RefreshView>
+
+        <ActivityIndicator
+	            Grid.RowSpan="2"
+	            Grid.ColumnSpan="2"
+	            HorizontalOptions="Fill"
+	            IsRunning="{Binding IsBusy}"
+	            IsVisible="{Binding IsBusy}"
+	            VerticalOptions="Center"
+	            Color="{StaticResource Primary}" />
+
+        <Button
+	    Grid.Row="1"
+	    Grid.Column="0"
+	    Margin="8"
+	    Command="{Binding GetRandomCommand}"
+	    IsEnabled="{Binding IsNotBusy}"
+	    Style="{StaticResource HoverButtonStyle}"
+	    Text="Next Random Track" />
+    </Grid>
+</ContentPage>

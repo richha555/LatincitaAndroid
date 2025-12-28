@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+	x:Class="LatincitaAndroid.DetailsPage"
+	xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+	xmlns:viewmodel="clr-namespace:LatincitaAndroid.ViewModel"
+	x:DataType="viewmodel:RadioProgramDetailsViewModel"
+        xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit">
+
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="*,Auto"
+              VerticalOptions="Center">
+
+            <!-- Left title -->
+            <Label
+                Text="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}"
+                FontSize="Title"
+                TextColor="White"
+                FontAttributes="Bold"
+                VerticalOptions="Center" />
+
+            <!-- Right text -->
+            <Label
+                Grid.Column="1"
+                Text="{Binding ProgramListService.CurrentTrack.SongID, TargetNullValue='—'}"
+                FontSize="Title"
+                TextColor="White"
+                VerticalOptions="Center"
+                HorizontalOptions="End" />
+        </Grid>
+    </Shell.TitleView>
+
+    <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground}, Dark={StaticResource DarkBackground}}">
+        <Grid RowDefinitions="Auto,Auto,*">
+	    <BoxView
+		    Grid.RowSpan="2"
+		    BackgroundColor="{StaticResource Primary}"
+		    HorizontalOptions="Fill"
+		    VerticalOptions="Fill" />
+
+		<Border
+			Margin="0,8,0,0"
+			HeightRequest="172"
+			HorizontalOptions="Center"
+			Stroke="White"
+			StrokeShape="RoundRectangle 80"
+			StrokeThickness="6"
+			VerticalOptions="Center"
+			WidthRequest="172">
+		    <Image
+			    Aspect="AspectFill"
+			    HeightRequest="160"
+			    HorizontalOptions="Center"
+			    Source="{Binding ProgramListService.CurrentRadioProgram.PictureURL}"
+			    VerticalOptions="Center"
+			    WidthRequest="160" />
+		</Border>
+
+
+                <!-- Put the three detail lines into a single visible row -->
+                <VerticalStackLayout Grid.Row="1" Padding="0" Spacing="2" HorizontalOptions="Center">
+                    <Label
+			    Grid.Row="1"
+			    Margin="0,0,0,8"
+			    FontAttributes="Bold"
+			    HorizontalOptions="Center"
+			    Style="{StaticResource LargeLabel}"
+			    Text="{Binding ProgramListService.Detail_line_1}"
+			    TextColor="White" />
+                    <Label
+			    Grid.Row="2"
+			    Margin="0,0,0,8"
+			    FontAttributes="Bold"
+			    HorizontalOptions="Center"
+			    Style="{StaticResource LargeLabel}"
+			    Text="{Binding ProgramListService.Detail_line_2}"
+			    TextColor="White" />
+                    <Label
+			    Grid.Row="3"
+			    Margin="0,0,0,8"
+			    FontAttributes="Bold"
+			    HorizontalOptions="Center"
+			    Style="{StaticResource LargeLabel}"
+			    Text="{Binding ProgramListService.Detail_line_3}"
+			    TextColor="White" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout
+				Grid.Row="4"
+				Padding="10"
+				Spacing="10">
+                    <toolkit:MediaElement Source="{Binding ProgramListService.Mp3}">
+                                </toolkit:MediaElement>
+
+                    <Label Style="{StaticResource SmallLabel}" Text="{Binding ProgramListService.Mp3}" HorizontalTextAlignment="Center" />
+		</VerticalStackLayout>
+	    </Grid>
+	</ScrollView>
+</ContentPage>
