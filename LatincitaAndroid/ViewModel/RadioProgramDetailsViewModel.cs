@@ -199,4 +199,15 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         }
     }
 
+    [RelayCommand]
+    async Task GoBack()
+    {
+        //await Shell.Current.GoToAsync(nameof(MainPage), true, new Dictionary<string, object>
+        //{
+        //    //  ["RadioProgram"] = RadioProgram //,
+        //    //  ["TrackObject"] = _track
+        //});
+        await Shell.Current.GoToAsync("..");
+    }
+
 }

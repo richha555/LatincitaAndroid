@@ -10,11 +10,12 @@
 
     <Shell.TitleView>
         <Grid ColumnDefinitions="*,Auto"
-                      VerticalOptions="Center">
+               VerticalOptions="Center">
 
             <!-- Left title -->
+            <!--        Text="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}"-->
             <Label
-                        Text="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}"
+                        Text="Latincita Android"
                         Margin="10,0,0,0"
                         FontSize="Title"
                         TextColor="White"
@@ -55,13 +56,23 @@
                 <!-- Row 3:  track-list -->
                 <BoxView
 			Margin="10,0,10,0"
-		        Grid.RowSpan="2"
+		        Grid.RowSpan="3"
 		        BackgroundColor="{StaticResource Primary}"
                         CornerRadius="10"
                         MaximumWidthRequest="740"
 		        VerticalOptions="Fill" />
 
-		<Border
+                <VerticalStackLayout Grid.Row="0" Padding="0" Spacing="0" HorizontalOptions="Center">
+                    <Label
+			    Margin="0,0,0,8"
+			    FontAttributes="Bold"
+			    HorizontalOptions="Center"
+			    Style="{StaticResource LargeLabel}"
+			    Text="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}"
+			    TextColor="White" />
+                </VerticalStackLayout>
+
+                <Border Grid.Row="1"
 			Margin="0,8,0,0"
 			HeightRequest="172"
 			HorizontalOptions="Center"
@@ -81,7 +92,7 @@
 
 
                 <!-- Put the three detail lines into a single visible row -->
-                <VerticalStackLayout Grid.Row="1" Padding="0" Spacing="0" HorizontalOptions="Center">
+                <VerticalStackLayout Grid.Row="2" Padding="0" Spacing="0" HorizontalOptions="Center">
                     <Label
 			    Margin="0,0,0,8"
 			    FontAttributes="Bold"
@@ -109,20 +120,23 @@
                 </VerticalStackLayout>
 
                 <VerticalStackLayout
-				Grid.Row="2"
+				Grid.Row="3"
 				Padding="10"
 				Spacing="10">
-                    <toolkit:MediaElement Source="{Binding ProgramListService.Mp3}">
+                    <toolkit:MediaElement Source="{Binding ProgramListService.Mp3}"
+                                          MetadataArtist="Latincita"
+                                          MetadataTitle="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}">
                                 </toolkit:MediaElement>
 
                     <!--<Label Style="{StaticResource SmallLabel}" Text="{Binding ProgramListService.Mp3}" HorizontalTextAlignment="Center" />-->
 		</VerticalStackLayout>
 
                 <CollectionView
-			Grid.Row="3"
+			Grid.Row="4"
 			Margin="10,0,10,0"
                         MaximumWidthRequest="740"
                         ItemsSource="{Binding ProgramListService.CurrentTrackList}"
+                        IsVisible="{Binding ProgramListService.CurrentTrackListNotEmpty}"
                         SelectionMode="None">
 
                     <!-- Optional header -->
@@ -178,5 +192,13 @@
 	    IsEnabled="{Binding IsNotBusy}"
 	    Style="{StaticResource HoverButtonStyle}"
 	    Text="Next Random Track" />
+        <Button
+	    Grid.Row="1"
+	    Grid.Column="1"
+	    Margin="8"
+	    Command="{Binding GoBackCommand}"
+	    IsEnabled="{Binding IsNotBusy}"
+	    Style="{StaticResource HoverButtonStyle}"
+	    Text="Back to List" />
     </Grid>
 </ContentPage>

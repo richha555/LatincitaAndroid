@@ -20,4 +20,5 @@ global using Microsoft.Extensions.Logging;
 // If you have already installed the package and still see the error, try rebuilding your solution.
 global using CommunityToolkit.Mvvm.Input;
 global using LatincitaAndroid.Model;
+global using LatincitaAndroid.View;
 global using LatincitaAndroid.ViewModel;

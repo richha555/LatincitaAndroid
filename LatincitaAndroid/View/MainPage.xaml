@@ -6,7 +6,7 @@
 	xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
 	xmlns:model="clr-namespace:LatincitaAndroid.Model"
 	xmlns:viewmodel="clr-namespace:LatincitaAndroid.ViewModel"
-	Title="Latincita Radio Programs"
+	Title="Latincita Android"
 	ios:Page.UseSafeArea="True"
 	x:DataType="viewmodel:RadioProgramsViewModel">
     <Grid
@@ -22,13 +22,20 @@
 		    IsRefreshing="{Binding IsRefreshing}">
             <CollectionView ItemsSource="{Binding ProgramListService.RadioPrograms}" SelectionMode="None">
                 <CollectionView.EmptyView>
-                    <StackLayout Padding="100">
-                        <Image
+                    <StackLayout Padding="0" BackgroundColor="Black">
+                        <!--<Image
 						    HeightRequest="160"
 						    HorizontalOptions="Center"
 						    Source="nodata.png"
 						    VerticalOptions="Center"
-						    WidthRequest="160" />
+						    WidthRequest="160" />-->
+                        <Image
+                                                    Margin="10,0,0,0"						    
+                                                    HorizontalOptions="Center"
+						    Source="waiting_for_latincita_2.jpg"
+                                                    Aspect="AspectFill"
+                                                    VerticalOptions="Center"
+						    />
                     </StackLayout>
                 </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
@@ -46,6 +53,7 @@
 									    WidthRequest="125" />
                                     <VerticalStackLayout
 									    Grid.Column="1"
+                                                                            Margin="0,-8,0,0"
 									    Padding="10"
 									    VerticalOptions="Center">
                                         <Label Style="{StaticResource LargeLabel}" Text="{Binding ArticleTitle}" />

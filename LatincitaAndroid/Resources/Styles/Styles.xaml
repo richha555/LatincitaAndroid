@@ -86,7 +86,7 @@
 
                         <VisualState Name="Pressed">
                             <VisualState.Setters>
-                                <Setter Property="BackgroundColor" Value="#144AA0" />
+                                <Setter Property="BackgroundColor" Value="#faf0e6" />
                             </VisualState.Setters>
                         </VisualState>
 

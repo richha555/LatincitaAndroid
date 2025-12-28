@@ -15,6 +15,10 @@ public partial class ProgramListService : ObservableObject
 {
     public ObservableCollection<RadioProgram> RadioPrograms { get; } = new();
 
+    public ObservableCollection<string> CdList { get; } = new() {
+        "Sola", "Echos from the Future", "Compilation 2010", "Gemstones", "Godess Latincita", "Caribbean Smile", "Idols"
+    };
+
     [ObservableProperty]
     private RadioProgram currentRadioProgram;
 
@@ -25,10 +29,16 @@ public partial class ProgramListService : ObservableObject
     private List<TrackObject> currentTrackList;
 
     [ObservableProperty]
+    private bool currentTrackListNotEmpty;
+
+    [ObservableProperty]
     private RadioProgramType currentType;  // RADIO / CD / TRACK
 
     [ObservableProperty]
     private string? mp3;
+
+    [ObservableProperty]
+    private int startPosition;
 
     [ObservableProperty]
     private string? id;
@@ -55,6 +65,9 @@ public partial class ProgramListService : ObservableObject
     {
         //  this.Title = this.radio_program.ArticleTitle;
         this.AllLatincitaService = AllLatincitaService;
+
+        CurrentTrackListNotEmpty = (CurrentTrackList != null) && (CurrentTrackList.Count > 0);
+        StartPosition = 0;
     }
 
     public void AddProgram(RadioProgram program)
@@ -71,11 +84,12 @@ public partial class ProgramListService : ObservableObject
 
         TrackObject _track = await AllLatincitaService.get_track(program);
 
-        if (program.Type == RadioProgramType.RADIO) {
-            currentTrackList = await AllLatincitaService.get_radio_tracks(program);
+        if ((program.Type == RadioProgramType.RADIO) || (_track != null && _track.soffset > 0)) {
+            CurrentTrackList = await AllLatincitaService.get_radio_tracks(program);
         } else {
-            currentTrackList = new();
+            CurrentTrackList = new();
         }
+        CurrentTrackListNotEmpty = (CurrentTrackList != null) && (CurrentTrackList.Count > 0);
 
         SetTrack(_track);
     }
@@ -86,6 +100,8 @@ public partial class ProgramListService : ObservableObject
         RadioProgram radioProgram = CurrentRadioProgram;
         TrackObject trackObject = CurrentTrack;
         RadioProgramType type = CurrentType;
+
+        StartPosition = 0;
 
         if (radioProgram is null) {
 
@@ -144,6 +160,8 @@ public partial class ProgramListService : ObservableObject
                 HasLine3 = true;
             }
             Id = trackObject.SongID > 0 ? string.Format("{0}", trackObject.SongID) : "";
+
+            StartPosition = trackObject.soffset;
         }
     }
     public void ClearList()
