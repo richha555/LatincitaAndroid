@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -22,6 +23,21 @@ public class RadioProgramsService
     {
         if (RadioProgramsList?.Count > 0)
             return RadioProgramsList;
+
+        ////#if ANDROID
+        //        var handler = new AndroidMessageHandler();
+        //        handler.ServerCertificateCustomValidationCallback =
+        //            (req, cert, chain, errors) =>
+        //                req.RequestUri.Host == "www.latincita.com";
+
+        //        var client = new HttpClient(handler);
+        //        client.DefaultRequestVersion = HttpVersion.Version11;
+        //        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+        //        client.Timeout = TimeSpan.FromSeconds(30);
+
+        ////#else
+        ////      var client = new HttpClient();
+        ////#endif
 
         httpClient.DefaultRequestHeaders.Accept.Clear();
         httpClient.DefaultRequestHeaders.Accept.Add(

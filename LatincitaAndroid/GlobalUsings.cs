@@ -22,3 +22,6 @@ global using CommunityToolkit.Mvvm.Input;
 global using LatincitaAndroid.Model;
 global using LatincitaAndroid.View;
 global using LatincitaAndroid.ViewModel;
+#if ANDROID
+global using Xamarin.Android.Net;
+#endif

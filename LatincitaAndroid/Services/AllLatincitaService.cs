@@ -78,9 +78,42 @@ public class AllLatincitaService
             if (p >= 0)
                 mp3 = mp3.Substring(p + 1);
         }
+        // RadioName of each track == RadioProgram.ArticleTitle + MP3 ia same
         foreach (TrackObject track in AllLatincitaList.Values) {
             if (track.RadioName.Equals(RadioProgram.ArticleTitle, StringComparison.InvariantCultureIgnoreCase) && track.song_url.Contains(mp3, StringComparison.InvariantCultureIgnoreCase)) {
                 tracks.Add(track);
+            }
+        }
+        tracks.Sort((a, b) => a.soffset.CompareTo(b.soffset));
+
+        return tracks;
+    }
+
+    public async Task<List<TrackObject>> get_radio_tracks(TrackObject Track)
+    {
+        List<TrackObject> tracks = new();
+
+        if ((AllLatincitaList == null) || (AllLatincitaList.Count <= 0)) {
+            await this.GetAllLatincita();
+        }
+        if ((AllLatincitaList == null) || (AllLatincitaList.Count <= 0))
+            return tracks;
+        if ((Track == null) || Track.RadioID <= 0)
+            return tracks;
+
+        // RadioID of each track = RadioID of track provided
+        foreach (TrackObject _track in AllLatincitaList.Values) {
+            if ((Track.RadioID == _track.RadioID) && (_track.song_url == Track.song_url)) {
+
+                if (_track.soffset == Track.soffset) {
+                    _track.background_class = "HighlightedRowStyle";
+                    _track.isCurrentRow = true;
+                } else {
+                    _track.background_class = "DefaultRowStyle";
+                    _track.isCurrentRow = false;
+                }
+
+                tracks.Add(_track);
             }
         }
         tracks.Sort((a, b) => a.soffset.CompareTo(b.soffset));
@@ -95,6 +128,21 @@ public class AllLatincitaService
             return AllLatincitaList;
 
         AllLatincitaList = new Dictionary<int, TrackObject>();
+
+////#if ANDROID
+//        var handler = new AndroidMessageHandler();
+//        handler.ServerCertificateCustomValidationCallback =
+//            (req, cert, chain, errors) =>
+//                req.RequestUri.Host == "www.latincita.com";
+
+//        var client = new HttpClient(handler);
+//        client.DefaultRequestVersion = HttpVersion.Version11;
+//        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+//        client.Timeout = TimeSpan.FromSeconds(30);
+
+////#else
+////      var client = new HttpClient();
+////#endif
 
         httpClient.DefaultRequestHeaders.Accept.Clear();
         httpClient.DefaultRequestHeaders.Accept.Add(

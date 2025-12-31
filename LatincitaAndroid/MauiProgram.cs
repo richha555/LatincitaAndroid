@@ -17,8 +17,9 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 		    .UseMauiApp<App>()
-            .UseMauiCommunityToolkitMediaElement()
-            .ConfigureFonts(fonts =>
+                    .UseMauiCommunityToolkit()
+                    .UseMauiCommunityToolkitMediaElement()
+                    .ConfigureFonts(fonts =>
 		    {
 			    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 		    });
@@ -40,20 +41,21 @@ public static class MauiProgram
 
                 builder.Services.AddSingleton<RadioProgramsViewModel>();
                 builder.Services.AddTransient<RadioProgramDetailsViewModel>();
+        //      builder.Services.AddTransient<MediaPlayerViewModel>();
 
-                builder.Services.AddSingleton(sp =>
-                {
+                builder.Services.AddSingleton(sp => {
 #if ANDROID
                     var handler = new AndroidMessageHandler();
+                    handler.ServerCertificateCustomValidationCallback =
+                        (req, cert, chain, errors) =>
+                            req.RequestUri.Host == "www.latincita.com";
                     var client = new HttpClient(handler);
-#else
-                    var client = new HttpClient();
-#endif
-
                     client.DefaultRequestVersion = HttpVersion.Version11;
                     client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
                     client.Timeout = TimeSpan.FromSeconds(30);
-
+#else
+                    var client = new HttpClient();
+#endif
                     return client;
                 });
 

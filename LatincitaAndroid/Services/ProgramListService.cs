@@ -84,8 +84,10 @@ public partial class ProgramListService : ObservableObject
 
         TrackObject _track = await AllLatincitaService.get_track(program);
 
-        if ((program.Type == RadioProgramType.RADIO) || (_track != null && _track.soffset > 0)) {
+        if (program.Type == RadioProgramType.RADIO) {
             CurrentTrackList = await AllLatincitaService.get_radio_tracks(program);
+        } else if (_track != null && _track.soffset > 0) {
+            CurrentTrackList = await AllLatincitaService.get_radio_tracks(_track);
         } else {
             CurrentTrackList = new();
         }
@@ -146,14 +148,14 @@ public partial class ProgramListService : ObservableObject
             // assume this is a single track or song
             if (radioProgram.RecordedOn <= min_date) {
                 Detail_line_1 = "" + trackObject.song_title;
-                Detail_line_2 = "/ " + trackObject.artist;
+                Detail_line_2 = "" + trackObject.artist;
                 Detail_line_3 = "";
                 HasLine1 = true;
                 HasLine2 = true;
                 HasLine3 = false;
             } else {
                 Detail_line_1 = "" + trackObject.song_title;
-                Detail_line_2 = "/ " + trackObject.artist;
+                Detail_line_2 = "" + trackObject.artist;
                 Detail_line_3 = string.Format("{0:MMMM yyyy}", radioProgram.RecordedOn);
                 HasLine1 = true;
                 HasLine2 = true;

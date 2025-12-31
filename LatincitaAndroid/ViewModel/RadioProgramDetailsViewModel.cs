@@ -1,6 +1,8 @@
-﻿using LatincitaAndroid.Services;
+﻿using CommunityToolkit.Maui.Views;
+using LatincitaAndroid.Services;
 using System.Buffers.Text;
 using System.Globalization;
+using System.Windows.Input;
 
 namespace LatincitaAndroid.ViewModel;
 
@@ -16,6 +18,8 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
 
     //[ObservableProperty]
     //private TrackObject currentTrack;
+    public ICommand MediaOpenedCommand { get; }
+
 
     public AllLatincitaService AllLatincitaService { get; }
     public RadioProgramsService RadioProgramsService { get; }
@@ -32,12 +36,22 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         this.RandomService = RandomService;
         this.ProgramListService = ProgramListService;
 
+        MediaOpenedCommand = new Command(MediaPlayer_MediaOpened);
+
         ProgramListService.PropertyChanged += ProgramListService_PropertyChanged;
 
         //RadioPrograms = ProgramListService.RadioPrograms;
         //CurrentRadioProgram = ProgramListService.CurrentRadioProgram;
         //CurrentTrack = ProgramListService.CurrentTrack;
     }
+
+    public async void MediaPlayer_MediaOpened(object sender) // (object sender, EventArgs args)
+    {
+        MediaElement mediaElement = (MediaElement)sender;
+        Debug.WriteLine("The track '" + mediaElement.MetadataTitle + "' has been loaded");
+        //  await Shell.Current.DisplayAlert("Latincita Android", "The track '" + mediaElement.MetadataTitle + "' has been loaded", "OK");
+    }
+
 
     //[ObservableProperty]
     //private RadioProgram radioProgram;  // << backing-field

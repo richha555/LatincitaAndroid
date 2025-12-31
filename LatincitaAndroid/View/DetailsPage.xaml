@@ -49,11 +49,12 @@
                     Grid.ColumnSpan="2"
 		    Command="{Binding GetRandomCommand}"
 		    IsRefreshing="{Binding IsRefreshing}">
-            <Grid RowDefinitions="Auto,Auto,Auto,*">
-                <!-- Row 0:  image -->
-                <!-- Row 1:  detail-list -->
-                <!-- Row 2:  media-element -->
-                <!-- Row 3:  track-list -->
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+                <!-- Row 0:  Title -->
+                <!-- Row 1:  image -->
+                <!-- Row 2:  detail-list -->
+                <!-- Row 3:  media-element -->
+                <!-- Row 4:  track-list -->
                 <BoxView
 			Margin="10,0,10,0"
 		        Grid.RowSpan="3"
@@ -123,10 +124,17 @@
 				Grid.Row="3"
 				Padding="10"
 				Spacing="10">
-                    <toolkit:MediaElement Source="{Binding ProgramListService.Mp3}"
+                    <toolkit:MediaElement x:Name="mediaPlayer"
+                                          Source="{Binding ProgramListService.Mp3}"
+                                          MediaOpened="MediaPlayer_MediaOpened"
                                           MetadataArtist="Latincita"
-                                          MetadataTitle="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}">
-                                </toolkit:MediaElement>
+                                          MetadataTitle="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}" >
+                        <!--<toolkit:MediaElement.Behaviors>
+                            <toolkit:EventToCommandBehavior
+                                EventName="MediaOpened"
+                                Command="{Binding MediaOpenedCommand}" />
+                        </toolkit:MediaElement.Behaviors>-->
+                    </toolkit:MediaElement>
 
                     <!--<Label Style="{StaticResource SmallLabel}" Text="{Binding ProgramListService.Mp3}" HorizontalTextAlignment="Center" />-->
 		</VerticalStackLayout>
@@ -156,9 +164,22 @@
                     <!-- Row template -->
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="model:TrackObject">
+                        <!--      Class="{Binding background_class, Converter={StaticResource StyleClassConverter}}" -->
                             <Grid ColumnDefinitions="60,*"
                                   Padding="0"
+                                  BackgroundColor="{StaticResource DefaultRowStyle}"
                                   ColumnSpacing="12">
+                                <Grid.Triggers>
+                                    <DataTrigger
+                                            TargetType="Grid"
+                                            Binding="{Binding isCurrentRow}"
+                                            Value="True">
+                                        <Setter
+                                            Property="Style"
+                                            Value="{StaticResource HighlightedRowStyle}" />
+                                    </DataTrigger>
+                                </Grid.Triggers>
+
                                 <Label
                                     Text="{Binding start_time}"
                                     VerticalOptions="Center"

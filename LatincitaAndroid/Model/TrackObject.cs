@@ -65,6 +65,8 @@ public class TrackObject
             return s;
         }
     }
+    public bool isCurrentRow { get; set; }
+    public string background_class { get; set; }
 }
 
 
