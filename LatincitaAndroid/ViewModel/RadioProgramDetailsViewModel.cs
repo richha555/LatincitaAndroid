@@ -20,12 +20,20 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
     //private TrackObject currentTrack;
     public ICommand MediaOpenedCommand { get; }
 
+    [ObservableProperty]
+    private string mediaButton1Text = "Play";
+
+    [ObservableProperty]
+    private string mediaButton2Text = "";
+
 
     public AllLatincitaService AllLatincitaService { get; }
     public RadioProgramsService RadioProgramsService { get; }
     public RandomService RandomService { get; }
     public ProgramListService ProgramListService { get; }
     IConnectivity connectivity;
+
+    public event Action<string> Mp3UrlChanged;
 
     public RadioProgramDetailsViewModel(AllLatincitaService AllLatincitaService, RadioProgramsService RadioProgramsService, RandomService RandomService, ProgramListService ProgramListService, IConnectivity connectivity)
     {
@@ -43,6 +51,11 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         //RadioPrograms = ProgramListService.RadioPrograms;
         //CurrentRadioProgram = ProgramListService.CurrentRadioProgram;
         //CurrentTrack = ProgramListService.CurrentTrack;
+    }
+
+    public void Initialize()  //   <<< has to be explicity called from the DetailsPage when it appears ;-(
+    {
+        PublishCurrentUrl();
     }
 
     public async void MediaPlayer_MediaOpened(object sender) // (object sender, EventArgs args)
@@ -96,6 +109,13 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
     //partial void OnRadioProgramChanged(RadioProgram value)
     private void ProgramListService_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ProgramListService.Mp3Url)) {
+
+            PublishCurrentUrl();
+
+            return;
+        }
+
         if (e.PropertyName != nameof(ProgramListService.CurrentTrack)) {
             return;
         }
@@ -147,6 +167,13 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         //}
     }
 
+    void PublishCurrentUrl()
+    {
+        if (ProgramListService == null) return;
+
+        Mp3UrlChanged?.Invoke(ProgramListService.Mp3Url);  // note Mp3Url may be empty ... hopefully this will clear media on MediaElement
+    }
+
     [ObservableProperty]
     bool isRefreshing;
 
@@ -172,37 +199,7 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
                 return;
             }
 
-            RadioProgram radioProgram = new();
-
-            radioProgram.ID = _Random.id;
-            radioProgram.ArticleTitle = _Random.title;
-            radioProgram.MP3URL = _Random.m4v;
-            radioProgram.PictureURL = _Random.image.ImageFullURL;
-            //  radioProgram.RecordedOn .... Random does not provide date !
-
-            TrackObject _track = await AllLatincitaService.get_track(radioProgram);
-
-            DateTime recorded_on = DateTime.MinValue;
-
-            if ((_track != null) && !string.IsNullOrWhiteSpace(_track.recorded_on)) {
-                recorded_on = DateTime.ParseExact(
-                                _track.recorded_on,
-                                "MMMM yyyy",
-                                CultureInfo.GetCultureInfo("en-US"), DateTimeStyles.None);
-            }
-
-            radioProgram.RecordedOn = recorded_on;
-
-            radioProgram.Type = RadioProgramType.TRACK;
-
-            // The following lines expect a collection, but GetRandom returns a single PlayListItem.
-            // Adjust as needed. For now, clear and add the single item.
-            if (_Random != null)
-                //  this.RadioPrograms.Add(radioProgram);
-                ProgramListService.AddProgram(radioProgram);
-            else ProgramListService.SetProgram(null);
-
-            //ProgramListService.SetTrack(_track);
+            ProgramListService.AddRandom(_Random);  // append Random to main-list
 
         } catch (Exception ex) {
             Debug.WriteLine($"Unable to get Random Track: {ex.Message}");

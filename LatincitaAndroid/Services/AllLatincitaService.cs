@@ -2,8 +2,6 @@
 //using IntelliJ.Lang.Annotations;
 //using GoogleGson;
 //using GoogleGson;
-using Microsoft.VisualBasic.FileIO;
-using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +11,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic.FileIO;  // for TextFieldParser
 //using static Android.Provider.MediaStore.Audio;
 //using static AndroidX.Media3.Common.AdOverlayInfo;
 
@@ -26,7 +25,7 @@ public class AllLatincitaService
         this.httpClient = new HttpClient();
     }
 
-    Dictionary<int,TrackObject> AllLatincitaList;
+    Dictionary<string,TrackObject> AllLatincitaList;
 
     public async Task<TrackObject> get_track(RadioProgram RadioProgram)
     {
@@ -46,20 +45,21 @@ public class AllLatincitaService
             if (p >= 0) 
                 mp3 = mp3.Substring(p + 1);
         }
-        if (AllLatincitaList.ContainsKey(RadioProgram.ID)) {
-            track = AllLatincitaList[RadioProgram.ID];
-            if (track.article_title == RadioProgram.ArticleTitle && track.song_url.Contains(mp3,StringComparison.InvariantCultureIgnoreCase)) {
-                return track;
-            }
-        }
+        //if (AllLatincitaList.ContainsKey(RadioProgram.ID)) {
+        //    track = AllLatincitaList[RadioProgram.ID];
+        //    if (track.article_title == RadioProgram.ArticleTitle && track.song_url.Contains(mp3,StringComparison.InvariantCultureIgnoreCase)) {
+        //        return track;
+        //    }
+        //}
         // ID does not match, search for match on title & MP3 URL
-        track = AllLatincitaList.Values.FirstOrDefault(v => v.article_title == RadioProgram.ArticleTitle && v.song_url.Contains(mp3, StringComparison.InvariantCultureIgnoreCase));
+        track = AllLatincitaList.Values.FirstOrDefault(v => v.article_title == RadioProgram.ArticleTitle && v.mp3.Contains(mp3, StringComparison.InvariantCultureIgnoreCase));
 
         if (track != null)
             return track;
 
         return empty_track;
     }
+    // get all tracks from this RADIO or BAND
     public async Task<List<TrackObject>> get_radio_tracks(RadioProgram RadioProgram)
     {
         List<TrackObject> tracks = new();
@@ -78,17 +78,19 @@ public class AllLatincitaService
             if (p >= 0)
                 mp3 = mp3.Substring(p + 1);
         }
-        // RadioName of each track == RadioProgram.ArticleTitle + MP3 ia same
+        // RadioName of each track == RadioProgram.ArticleTitle + MP3 is the same
         foreach (TrackObject track in AllLatincitaList.Values) {
-            if (track.RadioName.Equals(RadioProgram.ArticleTitle, StringComparison.InvariantCultureIgnoreCase) && track.song_url.Contains(mp3, StringComparison.InvariantCultureIgnoreCase)) {
+            if (track.radioname.Equals(RadioProgram.ArticleTitle, StringComparison.InvariantCultureIgnoreCase) && 
+                track.mp3.Contains(mp3, StringComparison.InvariantCultureIgnoreCase)) {
                 tracks.Add(track);
             }
         }
-        tracks.Sort((a, b) => a.soffset.CompareTo(b.soffset));
+        tracks.Sort((a, b) => a.offset.CompareTo(b.offset));
 
         return tracks;
     }
 
+    // if track is from a RADIO or BAND, get all tracks from that RADIO or BAND
     public async Task<List<TrackObject>> get_radio_tracks(TrackObject Track)
     {
         List<TrackObject> tracks = new();
@@ -98,14 +100,14 @@ public class AllLatincitaService
         }
         if ((AllLatincitaList == null) || (AllLatincitaList.Count <= 0))
             return tracks;
-        if ((Track == null) || Track.RadioID <= 0)
+        if ((Track == null) || (Track.radioid <= 0))
             return tracks;
 
         // RadioID of each track = RadioID of track provided
         foreach (TrackObject _track in AllLatincitaList.Values) {
-            if ((Track.RadioID == _track.RadioID) && (_track.song_url == Track.song_url)) {
+            if ((Track.radioid == _track.radioid) && (_track.mp3 == Track.mp3)) {
 
-                if (_track.soffset == Track.soffset) {
+                if (_track.offset == Track.offset) {
                     _track.background_class = "HighlightedRowStyle";
                     _track.isCurrentRow = true;
                 } else {
@@ -116,18 +118,20 @@ public class AllLatincitaService
                 tracks.Add(_track);
             }
         }
-        tracks.Sort((a, b) => a.soffset.CompareTo(b.soffset));
+        tracks.Sort((a, b) => a.offset.CompareTo(b.offset));
 
         return tracks;
     }
 
 
-    public async Task<Dictionary<int, TrackObject>> GetAllLatincita()
+    public async Task<Dictionary<string, TrackObject>> GetAllLatincita()
     {
         if ((AllLatincitaList != null) && (AllLatincitaList.Count > 0))
             return AllLatincitaList;
 
-        AllLatincitaList = new Dictionary<int, TrackObject>();
+        AllLatincitaList = new Dictionary<string, TrackObject>();
+
+        Dictionary<string, int> offs_lookup = new();
 
 ////#if ANDROID
 //        var handler = new AndroidMessageHandler();
@@ -135,14 +139,14 @@ public class AllLatincitaService
 //            (req, cert, chain, errors) =>
 //                req.RequestUri.Host == "www.latincita.com";
 
-//        var client = new HttpClient(handler);
-//        client.DefaultRequestVersion = HttpVersion.Version11;
-//        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
-//        client.Timeout = TimeSpan.FromSeconds(30);
+        //        var client = new HttpClient(handler);
+        //        client.DefaultRequestVersion = HttpVersion.Version11;
+        //        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+        //        client.Timeout = TimeSpan.FromSeconds(30);
 
-////#else
-////      var client = new HttpClient();
-////#endif
+        ////#else
+        ////      var client = new HttpClient();
+        ////#endif
 
         httpClient.DefaultRequestHeaders.Accept.Clear();
         httpClient.DefaultRequestHeaders.Accept.Add(
@@ -157,7 +161,7 @@ public class AllLatincitaService
             List<Dictionary<string, string>> csv_data = ParseCsv(csv);
 
             foreach (Dictionary<string, string> row in csv_data) {
-                TrackObject track = new();
+                TrackObjectCSV track_csv = new();
                 foreach (string fld in row.Keys) {
                     var s = row[fld];
                     int n = 0;
@@ -254,7 +258,7 @@ public class AllLatincitaService
                     }
                     if (string.IsNullOrWhiteSpace(s)) {
                         s = "";
-                        n = 0;
+                        n = -1;  // <<<< NOTE: set to -1 if string is empty !!!
                     } else {
                         if (is_encoded) {
                             //  text.Replace("\r\n", "<CR>").Replace("\n\r", "<CR>").Replace("\n", "<CR>").Replace("\r", "<CR>").Replace("\t", "<TAB>").Replace(",", "<COMMA>").Replace("'", "<QUOTE>");
@@ -269,125 +273,159 @@ public class AllLatincitaService
                     }
                     switch (fld) {
                         case "BoxID":
-                            track.BoxID = s;
+                            track_csv.BoxID = s;
                             break;
                         case "SongID":
-                            track.SongID = n;
+                            track_csv.SongID = n;
                             break;
                         case "recorded_on":
-                            track.recorded_on = s;
+                            track_csv.recorded_on = s;
                             break;
                         case "released_on":
-                            track.released_on = s;
+                            track_csv.released_on = s;
                             break;
                         case "old_or_new":
-                            track.old_or_new = s;
+                            track_csv.old_or_new = s;
                             break;
                         case "created_with":
-                            track.created_with = n;
+                            track_csv.created_with = n;
                             break;
                         case "language":
-                            track.language = s;
+                            track_csv.language = s;
                             break;
                         case "genre":
-                            track.genre = s;
+                            track_csv.genre = s;
                             break;
                         case "purpose":
-                            track.purpose = s;
+                            track_csv.purpose = s;
                             break;
                         case "status":
-                            track.status = n;
+                            track_csv.status = n;
                             break;
                         case "smasterpiece":
                             if (s.ToUpper() == "TRUE") {
-                                track.masterpiece = true;
+                                track_csv.masterpiece = true;
                             } else {
-                                track.masterpiece = false;
+                                track_csv.masterpiece = false;
                             }
                             break;
                         case "article_title":
-                            track.article_title = s;
+                            track_csv.article_title = s;
                             break;
                         case "song_title":
-                            track.song_title = s;
+                            track_csv.song_title = s;
                             break;
                         case "video_song":
-                            track.video_song = s;
+                            track_csv.video_song = s;
                             break;
                         case "artist":
-                            track.artist = s;
+                            track_csv.artist = s;
                             break;
                         case "original_song":
-                            track.original_song = s;
+                            track_csv.original_song = s;
                             break;
                         case "wma_url":
-                            track.wma_url = s;
+                            track_csv.wma_url = s;
                             break;
                         case "song_url":
                             if (s.StartsWith("~"))
                                 s = s.Replace("~","https://www.latincita.com");
-                            track.song_url = s;
+                            track_csv.song_url = s;
                             break;
                         case "MP3_name":
-                            track.MP3_name = s;
+                            track_csv.MP3_name = s;
                             break;
                         case "critics_review":
-                            track.critics_review = s;
+                            track_csv.critics_review = s;
                             break;
                         case "diary_text":
-                            track.diary_text = s;
+                            track_csv.diary_text = s;
                             break;
                         case "poster_url":
                             if (s.StartsWith("~"))
                                 s = s.Replace("~", "https://www.latincita.com");
-                            track.poster_url = s;
+                            track_csv.poster_url = s;
                             break;
                         case "TrackNumber":
-                            track.TrackNumber = n;
+                            track_csv.TrackNumber = n;
                             break;
                         case "RadioID":
-                            if (s == "Music by Latincita") {
-                                track.RadioID = 0; // Music by Latincita
+                            if (s.Equals("Music by Latincita",StringComparison.InvariantCultureIgnoreCase)) {
+                                track_csv.RadioID = 0; // Music by Latincita
                             } else {
-                                track.RadioID = n;
+                                track_csv.RadioID = n;
                             }
                             break;
                         case "RadioName":
-                            track.RadioName = s;
+                            track_csv.RadioName = s;
                             break;
                         case "soffset":
-                            track.soffset = n;
+                            track_csv.soffset = n;
                             break;
                         case "snxtoffset":
-                            track.snxtoffset = n;
+                            track_csv.snxtoffset = n;
                             break;
                         case "sduration":
-                            track.sduration = n;
+                            track_csv.sduration = n;
                             break;
                         case "stars":
-                            track.stars = n;
+                            track_csv.stars = n;
                             break;
                         case "real_url":
-                            track.real_url = s;
+                            track_csv.real_url = s;
                             break;
                         case "karaoke_url":
-                            track.karaoke_url = s;
+                            track_csv.karaoke_url = s;
                             break;
                         case "version_of_song":
-                            track.version_of_song = s;
+                            track_csv.version_of_song = s;
                             break;
                         case "hide_if_not_on_radio":
-                            if ("hide_if_not_on_radio" == "" || "hide_if_not_on_radio" == "0") {
-                                track.hide_if_not_on_radio = false;
+                            if (s == "" || s == "0") {
+                                track_csv.hide_if_not_on_radio = false;
                             } else {
-                                track.hide_if_not_on_radio = true;
+                                track_csv.hide_if_not_on_radio = true;
                             }
                             break;
                     }
                 }
-                if (track.SongID > 0) {
-                    AllLatincitaList.Add(track.SongID, track);
-                }
+                if (track_csv.SongID > 0) {
+                    bool is_trackobj = false;  // *** figure out how to determine this
+                    bool is_track = false;     // *** figure out how to determine this
+
+                    //num_fsongs = 0;
+                    //numSongs = 0;
+                    //numTracks = 0;
+                    //numBands = 0;
+                    //numRadios = 0;
+
+                    //var songList = $("[id^=SongListData]");
+                    //var trackList = $("[id^=TrackListData]");
+                    //var bandList = $("[id^=BandListData]");
+                    //var radioList = $("[id^=RadioListData]");
+
+                    //numSongs = songList.length;
+                    //numTracks = trackList.length;
+                    //numBands = bandList.length;
+                    //numRadios = radioList.length;
+
+                    //if (numTracks > 0) {
+                    //    $.merge(songList, trackList);
+                    //}
+                    //if (numBands > 0) {
+                    //    $.merge(songList, bandList);
+                    //}
+                    //if (numRadios > 0) {
+                    //    $.merge(songList, radioList);
+                    //}
+                    //var isTrackObj = ((index >= numSongs) && (index < (numSongs + numTracks)));
+                    //var isTrack = isTrackObj;  // or offset > 0
+
+
+                    TrackObject track = new TrackObject(track_csv, is_trackobj, is_track, offs_lookup);
+
+                    AllLatincitaList.Add(track.id, track);
+                } //                     ^^^^^^^^ we finally have REAL song-id's !!
             }
         }
 

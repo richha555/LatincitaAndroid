@@ -10,6 +10,9 @@ using Xamarin.Android.Net;
 
 namespace LatincitaAndroid;
 
+// MEDIA-ELEMENT: https://learn.microsoft.com/en-us/dotnet/communitytoolkit/maui/views/mediaelement?tabs=windows
+// SAMPLE CODE:   https://github.com/CommunityToolkit/Maui/tree/main/samples/CommunityToolkit.Maui.Sample/Pages/Views/MediaElement
+
 public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
@@ -17,9 +20,9 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 		    .UseMauiApp<App>()
-                    .UseMauiCommunityToolkit()
-                    .UseMauiCommunityToolkitMediaElement()
-                    .ConfigureFonts(fonts =>
+            .UseMauiCommunityToolkit()
+            .UseMauiCommunityToolkitMediaElement()
+            .ConfigureFonts(fonts =>
 		    {
 			    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 		    });

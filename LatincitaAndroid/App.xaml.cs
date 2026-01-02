@@ -9,9 +9,9 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (s, e) => {
             Debug.WriteLine("UnhandledException: " + e.ExceptionObject?.ToString());
         };
-        TaskScheduler.UnobservedTaskException += (s, e) => {
-            Debug.WriteLine("UnobservedTaskException: " + e.Exception?.ToString());
-        };
+        //TaskScheduler.UnobservedTaskException += (s, e) => {
+        //    Debug.WriteLine("UnobservedTaskException: " + e.Exception?.ToString());
+        //};
 
 #if ANDROID
         Android.Runtime.AndroidEnvironment.UnhandledExceptionRaiser += (s, e) =>

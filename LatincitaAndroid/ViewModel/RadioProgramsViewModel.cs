@@ -79,8 +79,8 @@ public partial class RadioProgramsViewModel : BaseViewModel
 
             if (have_radio) {
                 Debug.WriteLine("Skipping loading Radio-Programs as they are already loaded.");
-                await Shell.Current.DisplayAlert("Load All Radio Programs",
-                    $"Radio-Programs appear to be already loaded - skipping load.", "OK");
+                //await Shell.Current.DisplayAlert("Load All Radio Programs",
+                //    $"Radio-Programs appear to be already loaded - skipping load.", "OK");
                 return;
             }
 
@@ -140,37 +140,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
                 return;
             }
 
-            RadioProgram radioProgram = new();
-
-            radioProgram.ID = _Random.id;
-            radioProgram.ArticleTitle = _Random.title;
-            radioProgram.MP3URL = _Random.m4v;
-            radioProgram.PictureURL = _Random.image.ImageFullURL;
-            //  radioProgram.RecordedOn .... Random does not provide date !
-
-            TrackObject _track = await AllLatincitaService.get_track(radioProgram);
-
-            DateTime recorded_on = DateTime.MinValue;
-
-            if ((_track != null) && !string.IsNullOrWhiteSpace(_track.recorded_on)) {
-                recorded_on = DateTime.ParseExact(
-                                _track.recorded_on,
-                                "MMMM yyyy",
-                                CultureInfo.GetCultureInfo("en-US"), DateTimeStyles.None);
-            }
-
-            radioProgram.RecordedOn = recorded_on;
-
-            radioProgram.Type = RadioProgramType.TRACK;
-
-            // The following lines expect a collection, but GetRandom returns a single PlayListItem.
-            // Adjust as needed. For now, clear and add the single item.
-            if (_Random != null)
-            //  this.RadioPrograms.Add(radioProgram);
-                ProgramListService.AddProgram(radioProgram);
-            else  ProgramListService.SetProgram(null);
-
-            //ProgramListService.SetTrack(_track);
+            ProgramListService.AddRandom(_Random);
 
         } catch (Exception ex)
         {

@@ -32,6 +32,8 @@ namespace LatincitaAndroid.Model
         public int Height { get; set; }
     }
 
+    // emulates jPlayerPlaylist.playlist items in jplayer.playlist
+
     public class PlayListItem
     {
         public string title { get; set; }

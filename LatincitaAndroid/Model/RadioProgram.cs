@@ -11,10 +11,23 @@ namespace LatincitaAndroid.Model;
 
 public enum RadioProgramType
 {
-    RADIO,
-    CD,
-    TRACK
+    RADIO,  // entire radio program
+    CD,     // entire CD
+    TRACK   // single (random) track
 }
+
+// items returned by REST server (members of lists)
+
+// converted to TrackObjects using MP3 & Title
+
+//                List<TrackObject> List<TrackObject>  -----------------+
+//                     ^^^                 ^^^                          |
+//                get_radio_tracks  get_radio_tracks                    |
+//                     ^^^                  ^^^                         v
+//  REST-SERVER:  RadioProgram  =>  TrackObject (theFsongs[])  =>   PlayListItem
+//                     ^^^        \                            /       ^^^
+//                GetRadioPrograms \                          /      GetRandom
+//                                  get_track   TrackObject_to_PlayListItem
 
 public class RadioProgram
 {
