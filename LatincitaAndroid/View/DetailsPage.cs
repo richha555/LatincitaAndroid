@@ -92,6 +92,7 @@ public partial class DetailsPage : ContentPage
 
     private async void MediaPlayer_MediaOpened(object sender, EventArgs args)
     {
+        bool seeked = false;
         MediaElement mediaElement = (MediaElement)sender;
         int start_pos = (viewModel != null) && (viewModel.ProgramListService != null) ? viewModel.ProgramListService.StartPosition : 0;
         // *** need to find a way to determine if this start_pos is for currently loaded Source
@@ -112,8 +113,8 @@ public partial class DetailsPage : ContentPage
 
                     // If Duration is zero or unknown, we should avoid seeking to an out-of-range position
                     if (duration == TimeSpan.Zero) {
-                        Debug.WriteLine("Media duration unknown; skipping SeekTo to avoid native crash.");
-                        canSeek = false;
+                        Debug.WriteLine("Media duration unknown; SeekTo may result in a native crash.");
+                        canSeek = true;
                     } else if (start_pos > duration.TotalSeconds) {
                         Debug.WriteLine($"Requested start_pos {start_pos} > duration {duration.TotalSeconds}; skipping SeekTo.");
                         canSeek = false;
@@ -129,6 +130,7 @@ public partial class DetailsPage : ContentPage
                     MainThread.BeginInvokeOnMainThread(async () =>
                     {
                         try {
+                            Debug.WriteLine($"Seeking to {start_pos} secs...");
                             await this.mediaPlayer.SeekTo(TimeSpan.FromSeconds(start_pos), CancellationToken.None);
                             Debug.WriteLine($"SeekTo succeeded to {start_pos} secs");
                         } catch (COMException comEx) {
@@ -139,6 +141,7 @@ public partial class DetailsPage : ContentPage
                             await Shell.Current.DisplayAlert("Playback error", exInner.Message, "OK");
                         }
                     });
+                    seeked = true;
                 }
             } else {
                 Debug.WriteLine("The track '" + this.mediaPlayer.MetadataTitle + "' has been loaded");
@@ -149,14 +152,18 @@ public partial class DetailsPage : ContentPage
             try { await Shell.Current.DisplayAlert("Error", ex.Message, "OK"); } catch { }
         }
 
-        ////////////////////////////// *** HAVE TO MOVE THIS TO SEEK FINISHED !!
-        //
-        //if (auto_play_source != null) {
-        //    if (auto_play_source.ToString() == mediaElement.Source.ToString()) {
-        //        auto_play_source = null;
-        //        OnPlayClicked(this.mediaPlayer, null);
-        //    }
-        //}
+        if (seeked == true) {
+            if (auto_play_source != null) {
+                Debug.WriteLine("Have to wait for seek to finish before initiating Play");
+            }
+        } else {
+            if (auto_play_source != null) {
+                if (auto_play_source.ToString() == mediaElement.Source.ToString()) {
+                    auto_play_source = null;
+                    OnPlayClicked(this.mediaPlayer, null);
+                }
+            }
+        }
     }
 
     void MediaElement_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -227,6 +234,10 @@ public partial class DetailsPage : ContentPage
         }
 
         double max_secs = (int)this.mediaPlayer.Duration.TotalSeconds;
+
+        if (max_secs < 2.0) {
+            return;  // don't trust it
+        }
         int beg_offset = 0;
         int nxt_offset = (int)max_secs;
         if ((viewModel != null) && (viewModel.ProgramListService != null)) {
@@ -272,7 +283,15 @@ public partial class DetailsPage : ContentPage
         PositionSlider.Value = pos_secs;
     }
 
-    void OnSeekCompleted(object? sender, EventArgs? e) => Debug.WriteLine("Seek completed.");
+    void OnSeekCompleted(object? sender, EventArgs? e) {
+        Debug.WriteLine("Seek completed.");
+        if (auto_play_source != null) {
+            if (auto_play_source.ToString() == this.mediaPlayer.Source.ToString()) {
+                auto_play_source = null;
+                OnPlayClicked(this.mediaPlayer, null);
+            }
+        }
+    }
 
     void OnSpeedMinusClicked(object? sender, EventArgs? e)
     {
@@ -562,8 +581,14 @@ public partial class DetailsPage : ContentPage
                 button2 = "Stop";
                 break;
             case MediaElementState.Paused:
-                button1 = "Resume";
-                button2 = "Stop";
+                //---------------------- when media is only cued up, reports state "Paused"
+                if (this.mediaPlayer.Source != null) {
+                    var position = this.mediaPlayer.Position;
+                    if (position.TotalSeconds > 1) {
+                        button1 = "Resume";
+                        button2 = "Stop";
+                    }
+                }
                 break;
         }
 

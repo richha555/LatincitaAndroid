@@ -79,7 +79,7 @@
 
                 <VerticalStackLayout Grid.Row="0" Padding="0" Spacing="0" HorizontalOptions="Center">
                     <Label
-			            Margin="0,0,0,8"
+			            Margin="20,5,20,8"
 			            FontAttributes="Bold"
 			            HorizontalOptions="Center"
 			            Style="{StaticResource LargeLabel}"
@@ -109,7 +109,7 @@
                 <!-- Put the three detail lines into a single visible row -->
                 <VerticalStackLayout Grid.Row="2" Padding="0" Spacing="0" HorizontalOptions="Center">
                     <Label
-			                Margin="0,0,0,8"
+			                Margin="20,5,20,5"
 			                FontAttributes="Bold"
 			                HorizontalOptions="Center"
 			                Style="{StaticResource LargeLabel}"
@@ -117,7 +117,7 @@
                             IsVisible="{Binding ProgramListService.HasLine1}" 
 			                TextColor="White" />
                     <Label
-			                Margin="0,0,0,8"
+			                Margin="20,0,20,5"
 			                FontAttributes="Bold"
 			                HorizontalOptions="Center"
 			                Style="{StaticResource LargeLabel}"
@@ -125,7 +125,8 @@
                             IsVisible="{Binding ProgramListService.HasLine2}" 
 			                TextColor="White" />
                     <Label
-			                Margin="0,0,0,8"
+			                Margin="0,0,0,10
+                        "
 			                FontAttributes="Bold"
 			                HorizontalOptions="Center"
 			                Style="{StaticResource LargeLabel}"
@@ -139,12 +140,12 @@
 				                Padding="10"
 				                Spacing="10">
                     <toolkit:MediaElement x:Name="mediaPlayer"
-                                          x:Load="{OnPlatform Android=false, Default=true}"
                                           IsVisible="True"
                                           ShouldAutoPlay="False"
                                           MediaOpened="MediaPlayer_MediaOpened"
                                           MediaEnded="OnMediaEnded"
                                           MediaFailed="OnMediaFailed"
+                                          Volume="1.0"
                                           PositionChanged="OnPositionChanged"
                                           StateChanged="OnStateChanged"
                                           SeekCompleted="OnSeekCompleted"
@@ -159,7 +160,7 @@
                         </toolkit:MediaElement.Behaviors>-->
                     </toolkit:MediaElement>
                     
-                    <Grid Padding="0,10,0,10" ColumnDefinitions="*,*,*,*" ColumnSpacing="5">
+                    <Grid Padding="0,10,0,5" ColumnDefinitions="*,*,*,*" ColumnSpacing="5">
                         <Button Grid.Column="0" Text="{Binding MediaButton1Text}" Clicked="OnButton1Clicked" />
                         <Button Grid.Column="1" Text="{Binding MediaButton2Text}" Clicked="OnButton2Clicked" />
                     <!--<Button Grid.Column="2" Text="Stop" Clicked="OnStopClicked" />-->
@@ -180,14 +181,14 @@
                             </Button.Triggers>
                         </Button>
                     </Grid>
+                    
                     <Slider
                         x:Name="PositionSlider"
-                        Grid.Row="3"
                         MinimumTrackColor="Gray"
                         DragStarted="Slider_DragStarted"
                         DragCompleted="Slider_DragCompleted"/>
 
-                    <Grid Grid.Row="4" HorizontalOptions="Fill">
+                    <!--<Grid Grid.Row="4" HorizontalOptions="Fill">
                         <Label HorizontalOptions="Start" x:DataType="toolkit:MediaElement" Text="{Binding Position, Source={x:Reference MediaElement}, Converter={StaticResource SecondsToStringConverter}}" />
                         <Label HorizontalOptions="End" HorizontalTextAlignment="End" x:DataType="toolkit:MediaElement" Text="{Binding Duration, Source={x:Reference MediaElement}, Converter={StaticResource SecondsToStringConverter}}" />
                     </Grid>
@@ -204,7 +205,7 @@
 
                         <Button Text="-" Clicked="OnVolumeMinusClicked" />
                         <Button Text="+" Clicked="OnVolumePlusClicked" />
-                    </HorizontalStackLayout>
+                    </HorizontalStackLayout>-->
                     <!--<Label Style="{StaticResource SmallLabel}" Text="{Binding ProgramListService.Mp3}" HorizontalTextAlignment="Center" />-->
 		        </VerticalStackLayout>
 

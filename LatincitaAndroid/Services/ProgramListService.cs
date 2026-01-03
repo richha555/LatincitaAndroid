@@ -77,7 +77,7 @@ public partial class ProgramListService : ObservableObject
         //  this.Title = this.radio_program.ArticleTitle;
         this.AllLatincitaService = AllLatincitaService;
 
-        CurrentTrackListNotEmpty = (CurrentTrackList != null) && (CurrentTrackList.Count > 0);
+        CurrentTrackListNotEmpty = ((CurrentTrackList != null) && (CurrentTrackList.Count > 0));
         StartPosition = 0;
         EndPosition = 0;
     }
@@ -103,7 +103,7 @@ public partial class ProgramListService : ObservableObject
         } else {
             CurrentTrackList = new();
         }
-        CurrentTrackListNotEmpty = (CurrentTrackList != null) && (CurrentTrackList.Count > 0);
+        CurrentTrackListNotEmpty = ((CurrentTrackList != null) && (CurrentTrackList.Count > 0));
 
         SetTrack(_track);
     }
@@ -159,6 +159,22 @@ public partial class ProgramListService : ObservableObject
             HasLine2 = false;
             HasLine3 = false;
             Id = radioProgram.ID > 0 ? string.Format("{0}",radioProgram.ID) : "";
+
+                                 // *** TODO ***
+            StartPosition = -1;  // could try setting to begin & end of first track
+            EndPosition = -1;    // then DetailsPage::OnPositionChanged could wait for Position to
+                                 // move out of cuurent track and update StartPosition/EndPosition
+                                 // to next track ... plus change highlighting in list
+
+            //if ((CurrentTrackList != null) && (CurrentTrackList.Count > 0)) {
+            //    TrackObject ttrack = CurrentTrackList[0];
+            //    if ((ttrack.offset >= 0) && (ttrack.nxtoffset > 0) && (ttrack.nxtoffset > ttrack.offset)) {
+            //        StartPosition = ttrack.offset;
+            //        EndPosition = ttrack.nxtoffset;
+            //    }
+            //}
+
+            Mp3Url = radioProgram?.mp3;  // triggers ProgramListService_PropertyChanged on RadioProgramDetailsViewModel
         } else {
             // assume this is a single track or song
             if (radioProgram.RecordedOn <= min_date) {
