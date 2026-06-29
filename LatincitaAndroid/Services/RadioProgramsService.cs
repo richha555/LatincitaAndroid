@@ -43,8 +43,11 @@ public class RadioProgramsService
         httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
 
+        var url = "https://www.latincita.com/api/radio";
+        Debug.WriteLine(">>> URL: " + url);
+
         // Online
-        var response = await httpClient.GetAsync("https://www.latincita.com/api/RadioPrograms");
+        var response = await httpClient.GetAsync(url);
         if (response.IsSuccessStatusCode)
         {
             RadioProgramsList = await response.Content.ReadFromJsonAsync(RadioProgramContext.Default.ListRadioProgram);

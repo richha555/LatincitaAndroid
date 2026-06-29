@@ -6,10 +6,10 @@ public partial class BaseViewModel : ObservableObject
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
-    bool isBusy;
+    public bool isBusy;
 
     [ObservableProperty]
-    string title;
+    public string title;
 
     //public string Title
     //{
@@ -24,4 +24,9 @@ public partial class BaseViewModel : ObservableObject
     //}
 
     public bool IsNotBusy => !IsBusy;
+
+    public void Set_Title(string title)
+    {
+        this.Title = title;
+    }
 }

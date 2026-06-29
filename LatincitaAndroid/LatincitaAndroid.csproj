@@ -55,6 +55,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="~%24%24Latincita Android.~vsdx" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <MauiImage Include="Resources\AppIcon\godess_latincita_postzegel.png" />
 	</ItemGroup>
 	

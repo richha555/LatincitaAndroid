@@ -11,9 +11,11 @@ namespace LatincitaAndroid.Model;
 
 public enum RadioProgramType
 {
-    RADIO,  // entire radio program
-    CD,     // entire CD
-    TRACK   // single (random) track
+    RADIO,    // entire radio program (live recording)
+    CD,       // entire CD
+    FAVORITE, // latincita playlist
+    RANDOM,   // single (random) track
+    ALL       // All Latincita
 }
 
 // items returned by REST server (members of lists)
@@ -45,7 +47,7 @@ public class RadioProgram
     [JsonPropertyName("Picture URL")]
     public string PictureURL { get; set; }
 
-    public RadioProgramType Type { get; set; } // TRACK RADIO CD
+    public RadioProgramType Type { get; set; } // TRACK RADIO CD PLIST
     public string mp3
     {
         get
@@ -56,6 +58,17 @@ public class RadioProgram
             return this.MP3URL;
         }
     }
+    public string RecordedOnMY
+    {
+        get
+        {
+            if (RecordedOn.Year < 1900) {
+                return "";
+            }
+            return RecordedOn.ToString("MMMM yyyy");
+        }
+    }
+
 }
 
 

@@ -37,8 +37,12 @@ public static class MauiProgram
                 builder.Services.AddSingleton<MainPage>();
                 builder.Services.AddTransient<DetailsPage>();
 
+                builder.Services.AddSingleton<AudioPlaybackService>();
+
                 builder.Services.AddSingleton<AllLatincitaService>();
                 builder.Services.AddSingleton<RadioProgramsService>();
+                builder.Services.AddSingleton<CdService>();
+                builder.Services.AddSingleton<FavoriteService>();
                 builder.Services.AddSingleton<RandomService>();
                 builder.Services.AddSingleton<ProgramListService>();
 

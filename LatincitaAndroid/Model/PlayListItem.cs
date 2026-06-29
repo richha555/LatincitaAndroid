@@ -44,11 +44,20 @@ namespace LatincitaAndroid.Model
         public bool entireRadio { get; set; }
         public string songid { get; set; }
         public int id { get; set; }
-        public List<TrackListItem> track_list { get; set; }
+        public List<TrackListItem> track_list { get; set; }  // should not need these, we try to create a PlayListItem for each track on a RADIO
         public PlayListItemImage image { get; set; }
         public List<TrackListItem> video_list { get; set; }
 
         public string played_list { get; set; }
+
+        public Guid guid { get; set; }
+
+        public PlayListItem()
+        {
+            this.track_list = new();
+            this.video_list = new();
+            this.guid = Guid.NewGuid();
+        }
     }
 }
 

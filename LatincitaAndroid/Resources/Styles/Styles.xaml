@@ -63,7 +63,7 @@
 		<Setter Property="BorderColor" Value="{StaticResource Primary}" />
 		<Setter Property="BorderWidth" Value="2" />
 		<Setter Property="HeightRequest" Value="40" />
-		<Setter Property="CornerRadius" Value="20" />
+		<Setter Property="CornerRadius" Value="10" />
 	</Style>
 
         <Style x:Key="HoverButtonStyle" TargetType="Button">
@@ -74,7 +74,7 @@
             <Setter Property="BorderColor" Value="{StaticResource Primary}" />
             <Setter Property="BorderWidth" Value="2" />
             <Setter Property="HeightRequest" Value="40" />
-            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="CornerRadius" Value="10" />
 
             <Setter Property="VisualStateManager.VisualStateGroups">
                 <VisualStateGroupList>
@@ -83,6 +83,43 @@
                         <VisualState Name="Normal">
                             <VisualState.Setters>
                                 <Setter Property="BackgroundColor" Value="#dac8c9" />
+                            </VisualState.Setters>
+                        </VisualState>
+
+                        <VisualState Name="PointerOver">
+                            <VisualState.Setters>
+                                <Setter Property="BackgroundColor" Value="#fae5e7" />
+                            </VisualState.Setters>
+                        </VisualState>
+
+                        <VisualState Name="Pressed">
+                            <VisualState.Setters>
+                                <Setter Property="BackgroundColor" Value="#faf0e6" />
+                            </VisualState.Setters>
+                        </VisualState>
+
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HoverSelectedButtonStyle" TargetType="Button">
+            <!--<Setter Property="BackgroundColor" Value="#2D7DFF" />-->
+            <!--<Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LightBackground}, Dark={StaticResource DarkBackground}}" />-->
+            <!--<Setter Property="TextColor" Value="{StaticResource Primary}" />-->
+            <Setter Property="TextColor" Value="Black" />
+            <Setter Property="BorderColor" Value="{StaticResource Primary}" />
+            <Setter Property="BorderWidth" Value="2" />
+            <Setter Property="HeightRequest" Value="40" />
+            <Setter Property="CornerRadius" Value="10" />
+
+            <Setter Property="VisualStateManager.VisualStateGroups">
+                <VisualStateGroupList>
+                    <VisualStateGroup Name="CommonStates">
+
+                        <VisualState Name="Normal">
+                            <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="#bf4f14" />
                             </VisualState.Setters>
                         </VisualState>
 

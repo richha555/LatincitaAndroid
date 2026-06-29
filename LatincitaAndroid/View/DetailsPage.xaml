@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
+    x:Name="MyDetailsPage"
 	x:Class="LatincitaAndroid.DetailsPage"
 	xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
@@ -51,7 +52,7 @@
 
     <Grid
 	    BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground},
-		                                Dark={StaticResource DarkBackground}}"
+		                                  Dark={StaticResource DarkBackground}}"
 	    ColumnDefinitions="*,*"
 	    ColumnSpacing="5"
 	    RowDefinitions="*,Auto,Auto"
@@ -83,7 +84,7 @@
 			            FontAttributes="Bold"
 			            HorizontalOptions="Center"
 			            Style="{StaticResource LargeLabel}"
-			            Text="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}"
+			            Text="{Binding ProgramListService.CurrentProgramTitle}"
 			            TextColor="White" />
                 </VerticalStackLayout>
 
@@ -100,7 +101,7 @@
 			            Aspect="AspectFill"
 			            HeightRequest="160"
 			            HorizontalOptions="Center"
-			            Source="{Binding ProgramListService.CurrentRadioProgram.PictureURL}"
+			            Source="{Binding ProgramListService.CurrentPictureURL}"
 			            VerticalOptions="Center"
 			            WidthRequest="160" />
 		        </Border>
@@ -139,9 +140,10 @@
 				                Grid.Row="3"
 				                Padding="10"
 				                Spacing="10">
-                    <toolkit:MediaElement x:Name="mediaPlayer"
+                    <toolkit:MediaElement x:Name="mediaPlayer"  
                                           IsVisible="True"
-                                          ShouldAutoPlay="False"
+                                          ShouldAutoPlay="True"
+                                          Loaded="MediaPlayer_Loaded"
                                           MediaOpened="MediaPlayer_MediaOpened"
                                           MediaEnded="OnMediaEnded"
                                           MediaFailed="OnMediaFailed"
@@ -150,7 +152,7 @@
                                           StateChanged="OnStateChanged"
                                           SeekCompleted="OnSeekCompleted"
                                           MetadataArtist="Latincita"
-                                          MetadataTitle="{Binding ProgramListService.CurrentRadioProgram.ArticleTitle}" >
+                                          MetadataTitle="{Binding ProgramListService.CurrentProgramTitle}" >
                         <!--              Source="{Binding ProgramListService.Mp3}"
                         -->
                         <!--<toolkit:MediaElement.Behaviors>
@@ -163,8 +165,10 @@
                     <Grid Padding="0,10,0,5" ColumnDefinitions="*,*,*,*" ColumnSpacing="5">
                         <Button Grid.Column="0" Text="{Binding MediaButton1Text}" Clicked="OnButton1Clicked" />
                         <Button Grid.Column="1" Text="{Binding MediaButton2Text}" Clicked="OnButton2Clicked" />
-                    <!--<Button Grid.Column="2" Text="Stop" Clicked="OnStopClicked" />-->
-                        <Button Grid.Column="3" Text="Mute" Clicked="OnMuteClicked">
+                        <Button Grid.Column="2" Text="▼" Clicked="OnNextTrackClicked" />
+                        <Button Grid.Column="3" Text="▲" Clicked="OnPrevTrackClicked" />
+                        <!--<Button Grid.Column="2" Text="Stop" Clicked="OnStopClicked" />-->
+                        <!--<Button Grid.Column="3" Text="Mute" Clicked="OnMuteClicked">
                             <Button.Triggers>
                                 <DataTrigger TargetType="Button"
                                      x:DataType="toolkit:MediaElement"
@@ -179,7 +183,7 @@
                                     <Setter Property="Text" Value="Mute" />
                                 </DataTrigger>
                             </Button.Triggers>
-                        </Button>
+                        </Button>-->
                     </Grid>
                     
                     <Slider
@@ -209,12 +213,14 @@
                     <!--<Label Style="{StaticResource SmallLabel}" Text="{Binding ProgramListService.Mp3}" HorizontalTextAlignment="Center" />-->
 		        </VerticalStackLayout>
 
+                <!--Playlist with Timestamps...-->
+                
                 <CollectionView
 			            Grid.Row="4"
 			            Margin="10,0,10,0"
                         MaximumWidthRequest="740"
                         ItemsSource="{Binding ProgramListService.CurrentTrackList}"
-                        IsVisible="{Binding ProgramListService.CurrentTrackListNotEmpty}"
+                        IsVisible="{Binding ProgramListService.ShowTrackListWithTimestamps}"
                         SelectionMode="None">
 
                     <!-- Optional header -->
@@ -234,7 +240,7 @@
                     <!-- Row template -->
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="model:TrackObject">
-                        <!--      Class="{Binding background_class, Converter={StaticResource StyleClassConverter}}" -->
+                            <!--      Class="{Binding background_class, Converter={StaticResource StyleClassConverter}}" -->
                             <Grid ColumnDefinitions="60,*"
                                   Padding="0"
                                   BackgroundColor="{StaticResource DefaultRowStyle}"
@@ -257,6 +263,63 @@
                                 <Label
                                     Grid.Column="1"
                                     Text="{Binding article_title}"
+                                    LineBreakMode="TailTruncation"
+                                    VerticalOptions="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!--Playlist with no Timestamps...-->
+                
+                <CollectionView
+			            Grid.Row="4"
+			            Margin="10,0,10,0"
+                        MaximumWidthRequest="740"
+                        ItemsSource="{Binding ProgramListService.CurrentTrackList}"
+                        IsVisible="{Binding ProgramListService.ShowTrackListWithNoTimestamps}"
+                        SelectionMode="None">
+
+                    <!-- Optional header -->
+                    <CollectionView.Header>
+                        <Grid ColumnDefinitions="200,*"
+                              Padding="8"
+                              BackgroundColor="{StaticResource Gray200}">
+                            <Label Text="Song"
+                                   HorizontalTextAlignment="Start"
+                                   FontAttributes="Bold" />
+                            <Label Grid.Column="1"
+                                   Text="Original Artist"
+                                   FontAttributes="Bold" />
+                        </Grid>
+                    </CollectionView.Header>
+
+                    <!-- Row template -->
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="model:TrackObject">
+                        <!--      Class="{Binding background_class, Converter={StaticResource StyleClassConverter}}" -->
+                            <Grid ColumnDefinitions="200,*"
+                                  Padding="0"
+                                  BackgroundColor="{StaticResource DefaultRowStyle}"
+                                  ColumnSpacing="12">
+                                <Grid.Triggers>
+                                    <DataTrigger
+                                            TargetType="Grid"
+                                            Binding="{Binding isCurrentRow}"
+                                            Value="True">
+                                        <Setter
+                                            Property="Style"
+                                            Value="{StaticResource HighlightedRowStyle}" />
+                                    </DataTrigger>
+                                </Grid.Triggers>
+
+                                <Label
+                                    Text="{Binding song}"
+                                    VerticalOptions="Center"
+                                    HorizontalTextAlignment="Start" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding artist}"
                                     LineBreakMode="TailTruncation"
                                     VerticalOptions="Center" />
                             </Grid>

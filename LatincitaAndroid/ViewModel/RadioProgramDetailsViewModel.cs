@@ -18,7 +18,9 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
 
     //[ObservableProperty]
     //private TrackObject currentTrack;
-    public ICommand MediaOpenedCommand { get; }
+
+    //public ICommand MediaPlayerLoaded { get; }
+    //public ICommand MediaOpenedCommand { get; }
 
     [ObservableProperty]
     private string mediaButton1Text = "Play";
@@ -26,16 +28,23 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
     [ObservableProperty]
     private string mediaButton2Text = "";
 
+    [ObservableProperty]
+    private bool playlistHasTimestamps = true;
 
     public AllLatincitaService AllLatincitaService { get; }
     public RadioProgramsService RadioProgramsService { get; }
     public RandomService RandomService { get; }
     public ProgramListService ProgramListService { get; }
+    public AudioPlaybackService AudioPlaybackService { get; }
+
+    [ObservableProperty]
+    bool isRefreshing;
+
     IConnectivity connectivity;
 
     public event Action<string> Mp3UrlChanged;
 
-    public RadioProgramDetailsViewModel(AllLatincitaService AllLatincitaService, RadioProgramsService RadioProgramsService, RandomService RandomService, ProgramListService ProgramListService, IConnectivity connectivity)
+    public RadioProgramDetailsViewModel(AllLatincitaService AllLatincitaService, RadioProgramsService RadioProgramsService, RandomService RandomService, ProgramListService ProgramListService, AudioPlaybackService AudioPlaybackService, IConnectivity connectivity)
     {
         //  this.Title = this.radio_program.ArticleTitle;
         this.connectivity = connectivity;
@@ -43,8 +52,10 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         this.RadioProgramsService = RadioProgramsService;
         this.RandomService = RandomService;
         this.ProgramListService = ProgramListService;
+        this.AudioPlaybackService = AudioPlaybackService;
 
-        MediaOpenedCommand = new Command(MediaPlayer_MediaOpened);
+        //MediaPlayerLoaded = new Command(MediaPlayer_Loaded);
+        //MediaOpenedCommand = new Command(MediaPlayer_MediaOpened);
 
         ProgramListService.PropertyChanged += ProgramListService_PropertyChanged;
 
@@ -56,15 +67,52 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
     public void Initialize()  //   <<< has to be explicity called from the DetailsPage when it appears ;-(
     {
         PublishCurrentUrl();
+
+        // we are being called when DetailsPage has been loaded
+
+        // this happens after RadioProgramsViewModel has passed the selected RadioProgram
+        // to ProgramListService
+
+        RadioProgramType type = this.ProgramListService.CurrentType;
+        RadioProgram program = this.ProgramListService.CurrentRadioProgram;
+        List<TrackObject> track_list = this.ProgramListService.CurrentTrackList;
+        TrackObject track = this.ProgramListService.CurrentTrack;
+        PlayListItem play_list_item = this.ProgramListService.CurrentPlayListItem;
+
     }
 
-    public async void MediaPlayer_MediaOpened(object sender) // (object sender, EventArgs args)
+    public async Task<TrackObject> GoTo_Next_Track()
     {
-        MediaElement mediaElement = (MediaElement)sender;
+        var track = await this.ProgramListService.Goto_NextTrack();
+        return track;
+    }
+    public async Task<TrackObject> GoTo_Prev_Track()
+    {
+        var track = await this.ProgramListService.Goto_PrevTrack();
+        return track;
+    }
+
+
+    public void MediaPlayer_Register(MediaElement _mediaPlayer)
+    {
+        this.AudioPlaybackService.MediaPlayer_Register(_mediaPlayer);
+    }
+    public void MediaPlayer_Unregister()
+    {
+        this.AudioPlaybackService.MediaPlayer_Unregister();
+    }
+
+    public async void MediaPlayer_MediaOpened(MediaElement mediaElement) // (object sender, EventArgs args)
+    {
         Debug.WriteLine("The track '" + mediaElement.MetadataTitle + "' has been loaded");
         //  await Shell.Current.DisplayAlert("Latincita Android", "The track '" + mediaElement.MetadataTitle + "' has been loaded", "OK");
-    }
 
+        this.AudioPlaybackService.MediaPlayer_MediaOpened(mediaElement);
+    }
+    public void MediaPlayer_MediaEnded()
+    {
+        this.AudioPlaybackService.MediaPlayer_MediaEnded();
+    }
 
     //[ObservableProperty]
     //private RadioProgram radioProgram;  // << backing-field
@@ -121,6 +169,14 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         }
         RadioProgram radioProgram = ProgramListService.CurrentRadioProgram;
         TrackObject trackObject = ProgramListService.CurrentTrack;
+        PlayListItem playlistitem = ProgramListService.CurrentPlayListItem;
+
+        if (ProgramListService.CurrentType == RadioProgramType.RADIO ||
+            ProgramListService.CurrentType == RadioProgramType.CD) {
+            PlaylistHasTimestamps = true;
+        } else {
+            PlaylistHasTimestamps = false;
+        }
 
         if (radioProgram is null) {
             Title = "Latincita Radio Programs";
@@ -174,9 +230,6 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         Mp3UrlChanged?.Invoke(ProgramListService.Mp3Url);  // note Mp3Url may be empty ... hopefully this will clear media on MediaElement
     }
 
-    [ObservableProperty]
-    bool isRefreshing;
-
     [RelayCommand]
     async Task GetRandomAsync()
     {
@@ -190,7 +243,14 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
                 return;
             }
 
-///////////////////////////// CODE IS DUPLICATED IN RadioProgramsViewModel
+            ///////////////////////////// CODE IS DUPLICATED IN RadioProgramsViewModel
+
+            bool have_radio = false;
+            have_radio = ProgramListService.RadioPrograms.Any(x => x.Type == RadioProgramType.RADIO);
+
+            if (have_radio) {
+                ProgramListService.ClearList();
+            }
 
             IsBusy = true;
             var _Random = await RandomService.GetRandom();

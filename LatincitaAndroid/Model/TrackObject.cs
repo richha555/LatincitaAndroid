@@ -7,10 +7,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+
 #if ANDROID
 using static Android.Provider.MediaStore;
 using static AndroidX.ConstraintLayout.Core.Motion.Utils.HyperSpline;
 using static AndroidX.Media3.Common.AdOverlayInfo;
+using AndroidX.Media3.Extractor.Mp4;
 using Android.Media;
 using Android.Net;
 #endif
@@ -58,6 +60,9 @@ public class TrackObjectCSV  // objects sent to Music_Search => converted into T
     public string karaoke_url { get; set; }   // 30  karaoke_url 
     public string version_of_song { get; set; }// 31 version_of_song 
     public bool hide_if_not_on_radio { get; set; } // 32
+
+    public PlayListItem playListItem = null;
+
 
     //   private string _curr_mp3 = "";
 
@@ -121,10 +126,27 @@ public static class TrackConstants
     public static readonly string bNoError = "<OK>";
 }
 
-// emulates fTrackObject's in theFsongs[] in filter_mobile
+// TrackObject emulates fTrackObject's in theFsongs[] in filter_mobile  [theFsongs is a list of fTrackObject]
 // read from list sent to Music_Search  (AllLatincita)
 
-// copy these to PlayListItem's and push to Detail-Page
+// each RadioProgram needs to be converted to a TrackObject
+// ..and pushed to Detail-Page when user clicks on a RadioProgram on the main page
+
+// RadioProgram => TrackObject (theFsongs[])         => PlayListItem's
+
+// RANDOM          id should match (if we have it)      All current RadioPrograms => TrackObjects => PlayListItems
+//                 else match on title + mp3            each PlayListItem is a direct copy of a TrackObject
+//                                                      PlayListItem.play_list only contains one track if RANDOM is a track
+
+// RADIO           mp3 must match w/ offset -1          All tracks on RADIO or BAND => PlayListItem's
+//                 or type RADIO / BAND                 then PlayListItem.play_list is not needed
+
+// CD              must fetch tracks on CD from         All tracks on CD => PlayListItem's
+//                 REST server, and match using
+//                 id or title + mp3
+
+//                 Fetch_Radio_Programs(type)           TrackObject_to_Playlist(teack_object)
+
 
 public class TrackObject
 {
@@ -152,7 +174,7 @@ public class TrackObject
     public bool meesterwerk { get; set; } = false;
     public int stars { get; set; } = 0;
     public bool is_track { get; set; } = false;
-    public bool is_track_object { get; set; } = false;
+    private bool _is_track_object  { get; set; } = false;
     public bool is_live { get; set; } = false;
     public string article_title { get; set; } = "";
     public string critics_review { get; set; } = "";
@@ -170,6 +192,16 @@ public class TrackObject
     Dictionary<string, int> offs_lookup = null;
 
     private string _curr_mp3 = "";
+
+    public PlayListItem cached_playlist_item = null;
+
+    public string mp3s_music
+    {
+        get
+        {
+            return this.mp3s[(int)wmaTyp.cMusic];
+        }
+    }
 
     public string mp3
     {
@@ -189,12 +221,16 @@ public class TrackObject
     {
         get
         {
+            if (this.offset < 0) {  // only if we are playing a RADIO do we have usefull offsets !
+                return "--:--:--";
+            }
             string s = TimeSpan
                        .FromSeconds(this.offset)
                        .ToString(@"hh\:mm\:ss");
             return s;
         }
     }
+
     public bool isCurrentRow { get; set; }
     public string background_class { get; set; }
 
@@ -256,7 +292,7 @@ public class TrackObject
         }
 
         this.photo = CleanURL(csv.poster_url);  // poster_url = tphoto ???
-        this.is_track_object = is_trackobj;
+    //  this.is_track_object = is_trackobj; ... only true on RADIO/BAND page
         this.is_track = is_track;
         this.stars = csv.stars < 0 ? 0 : csv.stars;
 
@@ -330,6 +366,13 @@ public class TrackObject
         //      nxtoffs = 32000;  // assume "this" is last track, set next-offset to infinite
         //  } 
         return nxtoffs;
+    }
+    public bool is_track_object(RadioProgramType typ)
+    {
+        if ((typ == RadioProgramType.RADIO || typ == RadioProgramType.CD) && this.is_track) {
+            return true;  // track object is RADIO/BAND track on RADIO/BAND page
+        }
+        return false;
     }
 
     public static bool songIsVideo(string tmedia)

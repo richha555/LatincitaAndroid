@@ -6,37 +6,43 @@
 	xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
 	xmlns:model="clr-namespace:LatincitaAndroid.Model"
 	xmlns:viewmodel="clr-namespace:LatincitaAndroid.ViewModel"
-	Title="Latincita Android"
+	Title="{Binding PageTitle}"
 	ios:Page.UseSafeArea="True"
 	x:DataType="viewmodel:RadioProgramsViewModel">
+    <!--BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground},
+		                                  Dark={StaticResource DarkBackground}}"-->
     <Grid
-	    BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground},
-		                                Dark={StaticResource DarkBackground}}"
+	    BackgroundColor="Black"
 	    ColumnDefinitions="*,*"
-	    ColumnSpacing="5"
-	    RowDefinitions="*,Auto"
+	    ColumnSpacing="0"
+	    RowDefinitions="*,Auto,Auto"
 	    RowSpacing="0">
         <RefreshView
 		    Grid.ColumnSpan="2"
-		    Command="{Binding GetRadioProgramsCommand}"
+		    Command="{Binding RefreshProgramsCommand}"
 		    IsRefreshing="{Binding IsRefreshing}">
             <CollectionView ItemsSource="{Binding ProgramListService.RadioPrograms}" SelectionMode="None">
                 <CollectionView.EmptyView>
-                    <StackLayout Padding="0" BackgroundColor="Black">
-                        <!--<Image
+                    <!--<StackLayout Padding="0" BackgroundColor="Black">-->
+                    <Grid x:Name="ImageContainer"
+                          VerticalOptions="Start"
+                          Padding="0,10,0,0">
+                            <!--<Image
 						    HeightRequest="160"
 						    HorizontalOptions="Center"
 						    Source="nodata.png"
 						    VerticalOptions="Center"
 						    WidthRequest="160" />-->
-                        <Image
-                                                    Margin="10,0,0,0"						    
-                                                    HorizontalOptions="Center"
+                        <!--        top,right,bottom,left-->
+                        <Image x:Name="MainImage"
+                            Margin="0,0,0,0"						    
+                            HorizontalOptions="Center"
 						    Source="waiting_for_latincita_2.jpg"
-                                                    Aspect="AspectFill"
-                                                    VerticalOptions="Center"
-						    />
-                    </StackLayout>
+                            Aspect="AspectFill"
+                            VerticalOptions="Start"
+						/>
+                    </Grid>
+                    <!--</StackLayout>-->
                 </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="model:RadioProgram">
@@ -53,11 +59,11 @@
 									    WidthRequest="125" />
                                     <VerticalStackLayout
 									    Grid.Column="1"
-                                                                            Margin="0,-8,0,0"
+                                        Margin="0,-8,0,0"
 									    Padding="10"
 									    VerticalOptions="Center">
                                         <Label Style="{StaticResource LargeLabel}" Text="{Binding ArticleTitle}" />
-                                        <Label Style="{StaticResource MediumLabel}" Text="{Binding RecordedOn, StringFormat='{0:MMMM yyyy}'}" />
+                                        <Label Style="{StaticResource MediumLabel}" Text="{Binding RecordedOnMY}" /> <!-- , StringFormat='{0:MMMM yyyy}' -->
                                     </VerticalStackLayout>
                                 </Grid>
                             </Border>
@@ -79,28 +85,74 @@
         <Button
 		    Grid.Row="1"
 		    Grid.Column="0"
-		    Margin="8"
-		    Command="{Binding GetRandomCommand}"
+		    Margin="8,8,4,4"
+		    Command="{Binding GetRadioProgramsCommand}"
 		    IsEnabled="{Binding IsNotBusy}"
-	            Style="{StaticResource HoverButtonStyle}"
-		    Text="Select Random Track" />
+	        Style="{StaticResource HoverButtonStyle}"
+		    Text="Load All RADIO Programs">
+			<Button.Triggers >
+				<DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="RADIO">
+					<Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+				</DataTrigger>
+			</Button.Triggers>
+		</Button>
 
         <Button
 		    Grid.Row="1"
 		    Grid.Column="1"
-		    Margin="8"
-		    Command="{Binding GetRadioProgramsCommand}"
+		    Margin="4,8,8,4"
+		    Command="{Binding GetRandomCommand}"
 		    IsEnabled="{Binding IsNotBusy}"
 		    Style="{StaticResource HoverButtonStyle}"
-		    Text="Load All Radio Programs" />
+		    Text="Select RANDOM Track" >
+            <Button.Triggers>
+                <DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="RANDOM">
+                    <Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+                </DataTrigger>
+            </Button.Triggers>
+        </Button>
 
-        <!--<Button
-		    Grid.Row="1"
-		    Grid.Column="1"
-		    Margin="8"
-		    Command="{Binding GetClosestMonkeyCommand}"
+        <Button
+		    Grid.Row="2"
+		    Grid.Column="0"
+		    Margin="8,4,4,8"
+		    Command="{Binding GetCdsCommand}"
 		    IsEnabled="{Binding IsNotBusy}"
-		    Style="{StaticResource ButtonOutline}"
-		    Text="Find Closest" />-->
+	        Style="{StaticResource HoverButtonStyle}"
+		    Text="Show All CD's" >
+            <Button.Triggers>
+                <DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="CD">
+                    <Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+                </DataTrigger>
+            </Button.Triggers>
+        </Button>
+
+        <Button
+		    Grid.Row="2"
+		    Grid.Column="1"
+		    Margin="4,4,8,8"
+		    Command="{Binding GetFavoritesCommand}"
+		    IsEnabled="{Binding IsNotBusy}"
+		    Style="{StaticResource HoverButtonStyle}"
+		    Text="Load FAVORITES" >
+            <Button.Triggers>
+                <DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="FAVORITES">
+                    <Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+                </DataTrigger>
+            </Button.Triggers>
+        </Button>
+
     </Grid>
 </ContentPage>
