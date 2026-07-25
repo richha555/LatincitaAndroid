@@ -15,6 +15,8 @@ using System.Web;
 
 
 
+
+
 #if ANDROID
 using static Android.Icu.Text.CaseMap;
 using static Android.Provider.ContactsContract.CommonDataKinds;
@@ -38,7 +40,7 @@ public partial class ProgramListService : ObservableObject
 
     private List<PlayListItem> myPlaylist = new();
 
-    private Boolean isPlaying = false;
+    public Boolean isPlaying = false;
 
     [ObservableProperty]
     private RadioProgram currentRadioProgram;    // main-list
@@ -50,7 +52,23 @@ public partial class ProgramListService : ObservableObject
     private PlayListItem currentPlayListItem;     // jPlayerPlaylist.playlist item
 
     [ObservableProperty]
-    private List<TrackObject> currentTrackList;
+    private List<VisibleTrackObject> currentVisibleTrackList;
+
+    private List<TrackObject> _currentTrackList;
+    private List<TrackObject> CurrentTrackList
+    {
+        get {
+            return _currentTrackList;
+        } 
+        set {
+            _currentTrackList = value;
+            this.CurrentVisibleTrackList = new List<VisibleTrackObject>();
+            foreach (var item in _currentTrackList) {
+                VisibleTrackObject vitem = new VisibleTrackObject(item);
+                this.CurrentVisibleTrackList.Add(vitem);
+            }
+        }
+    }
 
     [ObservableProperty]
     private bool currentTrackListNotEmpty;
@@ -115,6 +133,20 @@ public partial class ProgramListService : ObservableObject
         CurrentTrackListNotEmpty = ((CurrentTrackList != null) && (CurrentTrackList.Count > 0));
         StartPosition = 0;
         EndPosition = 0;
+    }
+
+    public async void Set_Current_Track(TrackObject track)
+    {
+        foreach (VisibleTrackObject titem in CurrentVisibleTrackList) {
+            if (titem.my_track.id == track.id) {
+                titem.IsCurrentRow = true;
+                titem.Background_class = "HighlightedRowStyle";
+            } else {
+                titem.IsCurrentRow = false;
+                titem.Background_class = "DefaultRowStyle";
+            }
+        }
+        CurrentTrack = track;
     }
 
     public async void AddProgram(RadioProgram program, bool auto_select)
@@ -206,10 +238,18 @@ public partial class ProgramListService : ObservableObject
             // start playing first song
             // @ end go back to first number on playlist
         } else if (program.Type == RadioProgramType.RANDOM) {
+
+            // ------------------------------------- SIMPLY DISPLAY CLICKED ITEM
             // image is current track image
-            CurrentPictureURL = "";  // let SetTrack handle image
+            // CurrentPictureURL = "";  // let SetTrack handle image
             // CurrentProgramTitle:   Hubo Alguien   [track.song]
-            CurrentProgramTitle = "";  // let SetTrack handle title
+            // CurrentProgramTitle = "";  // let SetTrack handle title
+            CurrentPictureURL = CurrentRadioProgram.PictureURL; // *** could let SetTrack handle image
+            // CurrentProgramTitle:   Playlist: REH  [playlist-name]
+            CurrentProgramTitle = CurrentRadioProgram.ArticleTitle;
+            // text:   Mark Anthony - Hubo Alguien   [track.artist] - [track.song]
+            Detail_line_1 = CurrentRadioProgram.RecordedOn <= min_date ? "- * -" : string.Format("{0:MMMM yyyy}", CurrentRadioProgram.RecordedOn);
+            HasLine1 = true;
             // text:   Mark Anthony   [track.artist]
             // text:   Sep 2022  [track.date]
             // cue up 1st number as MP3   [track.mp3]
@@ -223,7 +263,7 @@ public partial class ProgramListService : ObservableObject
 
         if (program.Type == RadioProgramType.RADIO || program.Type == RadioProgramType.RANDOM) {
 
-            _track = await AllLatincitaService.get_track(program);
+            _track = await AllLatincitaService.get_track(program);  // MP3 w/ entire radio or selected RANDOM
 
             if (_track is null || _track.id == "") {
                 return;
@@ -257,12 +297,12 @@ public partial class ProgramListService : ObservableObject
             // to a TrackObject and pushed onto the CurrentTrackList
             // then the track user clicked on needs to be selected and auto-played
 
-            CurrentTrackList = new();
+            List<TrackObject> tlist = new();
 
             foreach (var prog in this.RadioPrograms) {
                 var _t = await AllLatincitaService.get_track(prog);
                 if (_t.id != "") {
-                    CurrentTrackList.Add(_t);
+                    tlist.Add(_t);
                     if (_t.id == _track.id) {
                         // this is our track
                     } else {
@@ -270,8 +310,7 @@ public partial class ProgramListService : ObservableObject
                     }
                 }
             }
-            PlayListItem track0 = await addAllToPlayList();  // copy entire CurrentTrackList to playlist
-
+            CurrentTrackList = tlist;  // must set in one go so it copies itself to currentVisibleTrackList
             TrackListHasTimestamps = false;  // hide offset column, there is no way to get sensible data into that column
         } else {
             CurrentTrackList = new();
@@ -316,6 +355,10 @@ public partial class ProgramListService : ObservableObject
                 // then we need to convert _track to a PlayListItem and get its "id"
                 // the we ask the AudioPlaybackService to scroll down to this id
 
+                this.AudioPlaybackService.PauseQueue();
+
+                PlayListItem track0 = await addAllToPlayList();  // copy entire CurrentTrackList to playlist
+
                 PlayListItem _item = _track.cached_playlist_item;
 
                 //await this.addAllToPlayList();
@@ -325,12 +368,14 @@ public partial class ProgramListService : ObservableObject
                 if (_item != null && _item.id > 0) {
                     await this.AudioPlaybackService.ScollDown_ToID(_item.id);  // scroll down so selected RANDOM is at the bottom of the queue
                 }
+
+                this.AudioPlaybackService.ResumeQueue();
             }
         }
 
-        foreach (TrackObject _tt in this.CurrentTrackList) {
-            _tt.background_class = "DefaultRowStyle";
-            _tt.isCurrentRow = false;
+        foreach (VisibleTrackObject _tt in this.CurrentVisibleTrackList) {
+            _tt.Background_class = "DefaultRowStyle";
+            _tt.IsCurrentRow = false;
         }
 
         await Task.Run(() =>
@@ -384,6 +429,8 @@ public partial class ProgramListService : ObservableObject
             return;
         }
 
+        Set_Current_Track(track);  // hightlight track in CurrentTrackList / CurrentVisibleTrackList
+
         if (type == RadioProgramType.RADIO) {
             // image is Radio Artwork
             // CurrentProgramTitle:   Radio 2 November  [radio name]
@@ -417,6 +464,7 @@ public partial class ProgramListService : ObservableObject
             // @ end go back to first number on playlist
         } else if (type == RadioProgramType.RANDOM) {
             // image is current track image
+            
             CurrentPictureURL = track.photo;
 
             if (radioProgram.RecordedOn <= min_date) {
@@ -443,18 +491,6 @@ public partial class ProgramListService : ObservableObject
             // auto add all current RANDOMs to playlist
             // start playing selected track
             // @ end auto-fetch RANDOM, add to playlistand auto-play it
-        }
-
-        foreach (TrackObject _tt in this.CurrentTrackList) {
-            if (_tt != null) {
-                if (_tt.id == track.id && _tt.offset == track.offset) {
-                    _tt.background_class = "HighlightedRowStyle";
-                    _tt.isCurrentRow = true;
-                } else {
-                    _tt.background_class = "DefaultRowStyle";
-                    _tt.isCurrentRow = false;
-                }
-            }
         }
 
         //if ((type == RadioProgramType.RADIO) || (type == RadioProgramType.CD) || (trackObject == null) || (trackObject.songid <= 0)) {
@@ -557,19 +593,190 @@ public partial class ProgramListService : ObservableObject
         await Task.Run(() =>
         {
             AddProgram(radioProgram, false);
-            //                           ^^^^^ only when RANDOM is added from Detail scherm
-            //                                 do we auto-select it
+            //                       ^^^^^ only when RANDOM is added from Detail scherm
+            //                             do we auto-select it
         });
     }
 
     public async Task<TrackObject> Goto_NextTrack()
     {
-        TrackObject the_track = null;
+        TrackObject curr_track = this.CurrentTrack;
+        Boolean is_last = await IsLastTrack(curr_track);
+        TrackObject next_track = new();
+        TrackObject the_track = new();
+        if (!is_last) {
+            next_track = await Next_Track();
+        } else {
+            next_track = await First_Track();
+        }
+
+        RadioProgramType type = CurrentType;
+
+        if (type == RadioProgramType.RADIO) {
+            // if this is a RADIO, we need to find the next-track and seek to its offset
+            if (!String.IsNullOrWhiteSpace(next_track.id)) {
+
+                if (isPlaying) {
+                    await this.AudioPlaybackService.SeekAsync(next_track.offset);
+                } else {
+                    await this.AudioPlaybackService.Select_Track_from_TrackList(next_track);
+                }
+            }
+        } else {
+            // if this is not a radio, we just tell the AudioPlaybackService to fetch the next item from the queue
+            // and push it to the MediaPlayer
+
+            // if this is a RANDOM and the queue is empty,
+            //    we need to fetch a new RANDOM, add it to the CurrentTrackList and push it onto the Queue
+        }
         return the_track;
     }
     public async Task<TrackObject> Goto_PrevTrack()
     {
+        TrackObject curr_track = this.CurrentTrack;
+        Boolean is_first = await IsFirstTrack(curr_track);
+        TrackObject prev_track = new();
+        TrackObject the_track = new();
+        if (!is_first) {
+            prev_track = await Next_Track();
+        } else {
+            prev_track = await Last_Track();
+        }
+        RadioProgramType type = CurrentType;
+
+        if (type == RadioProgramType.RADIO) {
+            // if this is a RADIO, we need to find the previous-track and seek to its offset
+            if (!String.IsNullOrWhiteSpace(prev_track.id)) {
+                if (isPlaying) {
+                    await this.AudioPlaybackService.SeekAsync(prev_track.offset);
+                } else {
+                    await this.AudioPlaybackService.Select_Track_from_TrackList(prev_track);
+                }
+            }
+        } else {
+            // if this is not a radio, we just tell the AudioPlaybackService to fetch the next item from the queue
+            // and push it to the MediaPlayer
+
+            // if this is a RANDOM and the queue is empty,
+            //    we need to fetch a new RANDOM, add it to the CurrentTrackList and push it onto the Queue
+        }
+        return the_track;
+    }
+
+    public async Task<TrackObject> Next_Track()
+    {
+        TrackObject curr_track = this.CurrentTrack;
+        TrackObject next_track = new();
+
+        Boolean found_curr = String.IsNullOrWhiteSpace(curr_track.id) ? true : false; // if no current, return first track
+
+        foreach (TrackObject _tt in this.CurrentTrackList) {
+            if (_tt != null) {
+                if (_tt.id == curr_track.id && _tt.offset == curr_track.offset) {
+                    found_curr = true;
+                } else {
+                    if (found_curr) {
+                        next_track = _tt;
+                        break;
+                    }
+                }
+            }
+        }
+        return next_track;
+    }
+    public async Task<TrackObject> Prev_Track()
+    {
+        TrackObject curr_track = this.CurrentTrack;
+        TrackObject prev_track = new();
+
+        Boolean found_curr = String.IsNullOrWhiteSpace(curr_track.id) ? true : false;  // if no current, return first track
+
+        foreach (TrackObject _tt in this.CurrentTrackList) {
+            if (_tt != null) {
+                if (_tt.id == curr_track.id && _tt.offset == curr_track.offset) {
+                    found_curr = true;
+                } else {
+                    if (found_curr) {
+                        break;
+                    } else {
+                        prev_track = _tt;
+                    }
+                }
+            }
+        }
+        return prev_track;
+    }
+
+    public async Task<TrackObject> First_Track()
+    {
+        TrackObject frst_track = new();
+
+        foreach (TrackObject _tt in this.CurrentTrackList) {
+            if (_tt != null) {
+                frst_track = _tt;  break;
+            }
+        }
+        return frst_track;
+    }
+    public async Task<TrackObject> Last_Track()
+    {
+        TrackObject last_track = new();
+
+        foreach (TrackObject _tt in this.CurrentTrackList) {
+            last_track = _tt;
+        }
+        return last_track;
+    }
+
+
+    public async Task<Boolean> IsLastTrack(TrackObject track)
+    {
+        Boolean is_last = false;
+        foreach (TrackObject _tt in this.CurrentTrackList) {
+            if (_tt != null) {
+                is_last = false;
+                if (_tt.id == track.id && _tt.offset == track.offset) {
+                    is_last = true;
+                }
+            }
+        }
+        return is_last;
+    }
+    public async Task<Boolean> IsFirstTrack(TrackObject track)
+    {
+        Boolean is_first = false;
+        foreach (TrackObject _tt in this.CurrentTrackList) {
+            if (_tt != null) {
+                if (_tt.id == track.id && _tt.offset == track.offset) {
+                    is_first = true;
+                }
+                break;
+            }
+        }
+        return is_first;
+    }
+
+
+    public async Task<TrackObject> PlayListItemToTrackObject(PlayListItem tpitem, int offset)
+    {
         TrackObject the_track = null;
+
+        if (tpitem != null) {
+            foreach (TrackObject _track in this.CurrentTrackList) {
+                PlayListItem _playListItem = _track.cached_playlist_item;
+                if (_playListItem != null) {
+                    if (_playListItem.guid == tpitem.guid) {
+                        if (_track.offset < 0 || offset < 0 || offset == 0) {
+                            the_track = _track;  // found it
+                            break;
+                        } else if ((_track.offset <= offset) && (_track.nxtoffset >= offset)) {
+                            the_track = _track;  // found it
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         return the_track;
     }
 
@@ -577,32 +784,43 @@ public partial class ProgramListService : ObservableObject
     {
         TrackObject the_track = null;
 
-        // try to find what is currently playing in CurrentTrackList
-
-        // if it is a RADIO, we need to find the item using the current offset
-        // else, we only need the URL
-
-        foreach (TrackObject _track in this.CurrentTrackList) {
-            PlayListItem _playListItem = _track.cached_playlist_item;
-            if (_playListItem != null) {
-                string _url = _playListItem.m4v;
-                _url = HttpUtility.UrlDecode(_url);  // ChatGPT says undo url encoding
-
-                bool url_matches = IsSameMediaUrlIgnoringDomain(source, _url);
-
-                if (url_matches) {
-                    // probably track in CurrentTrackList that is being played.
-                    // check the offset
-                    if (_track.offset < 0) {
-                        the_track = _track;  // found it
-                        break;
-                    } else if ((_track.offset <= offset) && (_track.nxtoffset >= offset)) {
-                        the_track = _track;  // found it
-                        break;
-                    }
-                }
-            }
+        PlayListItem tpitem = this.AudioPlaybackService.CurrentPlayListItem;
+        //string turl = tpitem.m4v;
+        //turl = HttpUtility.UrlDecode(turl);  // ChatGPT says undo url encoding
+        //bool url_unchanged = IsSameMediaUrlIgnoringDomain(source, turl);
+        //if (url_unchanged) {
+        if (tpitem != null) {
+            // ok - MediaSource == what Load_Track last loaded
+            // we have a PlayListItem ... now we turn this into a TrackObject
+            the_track = await PlayListItemToTrackObject(tpitem, offset);
         }
+
+        //// try to find what is currently playing in CurrentTrackList
+
+        //// if it is a RADIO, we need to find the item using the current offset
+        //// else, we only need the URL
+
+        //foreach (TrackObject _track in this.CurrentTrackList) {
+        //    PlayListItem _playListItem = _track.cached_playlist_item;
+        //    if (_playListItem != null) {
+        //        string _url = _playListItem.m4v;
+        //        _url = HttpUtility.UrlDecode(_url);  // ChatGPT says undo url encoding
+
+        //        bool url_matches = IsSameMediaUrlIgnoringDomain(source, _url);
+
+        //        if (url_matches) {
+        //            // probably track in CurrentTrackList that is being played.
+        //            // check the offset
+        //            if (_track.offset < 0) {
+        //                the_track = _track;  // found it
+        //                break;
+        //            } else if ((_track.offset <= offset) && (_track.nxtoffset >= offset)) {
+        //                the_track = _track;  // found it
+        //                break;
+        //            }
+        //        }
+        //    }
+        //}
         return the_track;
     }
 
@@ -628,6 +846,22 @@ public partial class ProgramListService : ObservableObject
         return playListItem0;
     }
 
+    public async Task<TrackObject> TrackListItem_to_TrackObject(TrackListItem item)
+    {
+        if (item  == null || item.trackid < 0) return null;
+
+        Dictionary<int, TrackObject> theFsongs = await AllLatincitaService.GetFsongs();
+
+        if (theFsongs == null || theFsongs.Count <= 0) {
+            Debug.WriteLine("| ERROR: no songs available to play");
+            return null;
+        }
+        if (!theFsongs.ContainsKey(item.trackid)) {
+            return null;
+        }
+        return theFsongs[item.trackid];
+    }
+
     public async Task<PlayListItem> addToPlaylist(TrackObject track, wmaTyp useWma)
     {
         PlayListItem PlayListItem = new();
@@ -635,7 +869,7 @@ public partial class ProgramListService : ObservableObject
         Dictionary<int, TrackObject> theFsongs = await AllLatincitaService.GetFsongs();
 
         if (theFsongs == null || theFsongs.Count <= 0) {
-            Debug.WriteLine("ERROR: no songs available to play");
+            Debug.WriteLine("| ERROR: no songs available to play");
             return null;
         }
 
@@ -651,7 +885,7 @@ public partial class ProgramListService : ObservableObject
             }
         }
         if (n <= 0) {
-            Debug.WriteLine($"ERROR: track id {track.id} [{track.mp3}] not found in theFsongs");
+            Debug.WriteLine($"| ERROR: track id {track.id} [{track.mp3}] not found in theFsongs");
             return null;
         }
 
@@ -679,7 +913,7 @@ public partial class ProgramListService : ObservableObject
                 }
             }
             if (songidx < 0) {
-                Debug.WriteLine($"ERROR: can't locate radio [{radioid}] for track ({n})");
+                Debug.WriteLine($"| ERROR: can't locate radio [{radioid}] for track ({n})");
                 return null;
             } else {
                 n = songidx;  // queue up radio "n"  &  request track "trackidx"
@@ -717,7 +951,7 @@ public partial class ProgramListService : ObservableObject
 
         string tmedia = theFsongs[n].mp3s[(int)useWma];
         if (string.IsNullOrWhiteSpace(tmedia) || extension(tmedia) == "" || tmedia == "<NONE>") {
-            Debug.WriteLine($"ERROR: item [{n}] does not have a media-url");
+            Debug.WriteLine($"| ERROR: item [{n}] does not have a media-url");
             return null;
         }
         //  tmedia_fav = Curr_Favorite(n, useWma);
@@ -901,7 +1135,7 @@ public partial class ProgramListService : ObservableObject
             //        }
             //    }
             //}
-            Debug.WriteLine($"Videos are not yet supported");
+            Debug.WriteLine($"| Videos are not yet supported");
             return null;
         }
         //if (sobj2 === undefined) {

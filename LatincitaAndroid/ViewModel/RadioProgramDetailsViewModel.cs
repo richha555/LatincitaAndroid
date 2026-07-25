@@ -1,8 +1,9 @@
-﻿using CommunityToolkit.Maui.Views;
-using LatincitaAndroid.Services;
-using System.Buffers.Text;
+﻿using System.Buffers.Text;
 using System.Globalization;
 using System.Windows.Input;
+using AndroidX.Lifecycle;
+using CommunityToolkit.Maui.Views;
+using LatincitaAndroid.Services;
 
 namespace LatincitaAndroid.ViewModel;
 
@@ -75,7 +76,7 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
 
         RadioProgramType type = this.ProgramListService.CurrentType;
         RadioProgram program = this.ProgramListService.CurrentRadioProgram;
-        List<TrackObject> track_list = this.ProgramListService.CurrentTrackList;
+        List<VisibleTrackObject> track_list = this.ProgramListService.CurrentVisibleTrackList;
         TrackObject track = this.ProgramListService.CurrentTrack;
         PlayListItem play_list_item = this.ProgramListService.CurrentPlayListItem;
 
@@ -83,11 +84,15 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
 
     public async Task<TrackObject> GoTo_Next_Track()
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::GoTo_Next_Track");
+
         var track = await this.ProgramListService.Goto_NextTrack();
         return track;
     }
     public async Task<TrackObject> GoTo_Prev_Track()
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::GoTo_Prev_Track");
+
         var track = await this.ProgramListService.Goto_PrevTrack();
         return track;
     }
@@ -95,23 +100,102 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
 
     public void MediaPlayer_Register(MediaElement _mediaPlayer)
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::MediaPlayer_Register");
+
+        this.ProgramListService.isPlaying = false;
+
         this.AudioPlaybackService.MediaPlayer_Register(_mediaPlayer);
     }
     public void MediaPlayer_Unregister()
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::MediaPlayer_Unregister");
+
+        this.ProgramListService.isPlaying = false;
+
         this.AudioPlaybackService.MediaPlayer_Unregister();
     }
 
     public async void MediaPlayer_MediaOpened(MediaElement mediaElement) // (object sender, EventArgs args)
     {
-        Debug.WriteLine("The track '" + mediaElement.MetadataTitle + "' has been loaded");
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::MediaPlayer_MediaOpened");
+
+        Debug.WriteLine("| The track '" + mediaElement.MetadataTitle + "' has been loaded");
         //  await Shell.Current.DisplayAlert("Latincita Android", "The track '" + mediaElement.MetadataTitle + "' has been loaded", "OK");
+
+        // when MediaPlayer tells us it loaded a MP3, it is actually telling us that
+        // AudioPlaybackService read a track from the queue, and pushed it to the MediaPlayer
+        // this track had to come from the ProgramListService.CurrentTrackList
+        // what we need to do here is identify which track it was that was loaded
+
+        // ProgramListService takes each track from CurrentTrackList
+        // and adds them to the Queue.  AudioPlaybackService.CurrentPlayListItem
+        // points to the entry on CurrentTrackList that was read from the Queue
+
+        // note:  addToPlaylist takes a TrackObject from the CurrentTrackListItem
+        //        and converts it into a PlayListItem which is added to the queue
+        //        after converting the TrackObject to a PlayListItem
+        //        track.cached_playlist_item = playListItem;
+
+        PlayListItem playlist_item = this.AudioPlaybackService.CurrentPlayListItem;  // for a RADIO, this points to entire show
+
+        if (playlist_item != null) {
+            // ok - MediaSource == what Load_Track last loaded
+            // we have a PlayListItem ... now we turn this into a TrackObject
+            TrackObject track = await this.ProgramListService.PlayListItemToTrackObject(playlist_item, 0);
+            //                                                                                         ^--- media opened, find first entry
+            if (track != null) {
+                // mark this as the current item in CurrentTrackList
+                this.ProgramListService.SetTrack(track);
+            }
+        }
 
         this.AudioPlaybackService.MediaPlayer_MediaOpened(mediaElement);
     }
-    public void MediaPlayer_MediaEnded()
+    public async Task MediaPlayer_MediaEnded()
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::MediaPlayer_MediaEnded");
+
+        // song ended ... tell audio-service to read next item from the queue
+        // if queue is empty & we are in RANDOM mode
+        // need to fetch a new RANDOM, add it to playlist
+        // and push it onto the Queue
+
+        bool queue_is_empty = this.AudioPlaybackService.Queue_Is_Empty();
+
         this.AudioPlaybackService.MediaPlayer_MediaEnded();
+
+        if (queue_is_empty) {
+            RadioProgramType type = this.ProgramListService.CurrentType;
+            if (type == RadioProgramType.RANDOM) {
+                await GetRandomAsync();
+            }
+        }
+    }
+    public async void MediaPlayer_TrackEnded()
+    {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::MediaPlayer_TrackEnded");
+
+    //  play head reached end of current track, advance pointer to next track
+
+        this.AudioPlaybackService.MediaPlayer_TrackEnded();  // will advance to next track in the show
+
+        if (this.AudioPlaybackService.CurrentTrackListIndex < 0 ||
+            this.AudioPlaybackService.CurrentTrackListItem == null) {
+
+            // no next track ... end of show
+
+            this.AudioPlaybackService.MediaPlayer_MediaEnded();
+
+        } else {
+            TrackListItem track_item = this.AudioPlaybackService.CurrentTrackListItem;
+
+            TrackObject track = await this.ProgramListService.TrackListItem_to_TrackObject(track_item);
+
+            if (track != null) {
+                // mark this as the current item in CurrentTrackList
+                this.ProgramListService.SetTrack(track);
+            }
+        }
     }
 
     //[ObservableProperty]
@@ -159,6 +243,8 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
     {
         if (e.PropertyName == nameof(ProgramListService.Mp3Url)) {
 
+            Debug.WriteLine($"| RadioProgramDetailsViewModel::ProgramListService_PropertyChanged(Mp3Url)");
+
             PublishCurrentUrl();
 
             return;
@@ -167,6 +253,8 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
         if (e.PropertyName != nameof(ProgramListService.CurrentTrack)) {
             return;
         }
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::ProgramListService_PropertyChanged(CurrentTrack)");
+
         RadioProgram radioProgram = ProgramListService.CurrentRadioProgram;
         TrackObject trackObject = ProgramListService.CurrentTrack;
         PlayListItem playlistitem = ProgramListService.CurrentPlayListItem;
@@ -225,6 +313,8 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
 
     void PublishCurrentUrl()
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::PublishCurrentUrl");
+
         if (ProgramListService == null) return;
 
         Mp3UrlChanged?.Invoke(ProgramListService.Mp3Url);  // note Mp3Url may be empty ... hopefully this will clear media on MediaElement
@@ -233,6 +323,8 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
     [RelayCommand]
     async Task GetRandomAsync()
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::GetRandomAsync");
+
         if (IsBusy)
             return;
 
@@ -262,7 +354,7 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
             ProgramListService.AddRandom(_Random);  // append Random to main-list
 
         } catch (Exception ex) {
-            Debug.WriteLine($"Unable to get Random Track: {ex.Message}");
+            Debug.WriteLine($"| Unable to get Random Track: {ex.Message}");
             await Shell.Current.DisplayAlert("Error!", ex.Message, "OK");
         } finally {
             IsBusy = false;
@@ -273,6 +365,8 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
     [RelayCommand]
     async Task GoBack()
     {
+        Debug.WriteLine($"| RadioProgramDetailsViewModel::GoBack");
+
         //await Shell.Current.GoToAsync(nameof(MainPage), true, new Dictionary<string, object>
         //{
         //    //  ["RadioProgram"] = RadioProgram //,

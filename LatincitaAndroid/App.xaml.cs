@@ -7,16 +7,16 @@ public partial class App : Application
         InitializeComponent();
 
         AppDomain.CurrentDomain.UnhandledException += (s, e) => {
-            Debug.WriteLine("UnhandledException: " + e.ExceptionObject?.ToString());
+            Debug.WriteLine("| UnhandledException: " + e.ExceptionObject?.ToString());
         };
         //TaskScheduler.UnobservedTaskException += (s, e) => {
-        //    Debug.WriteLine("UnobservedTaskException: " + e.Exception?.ToString());
+        //    Debug.WriteLine("| UnobservedTaskException: " + e.Exception?.ToString());
         //};
 
 #if ANDROID
         Android.Runtime.AndroidEnvironment.UnhandledExceptionRaiser += (s, e) =>
         {
-            Debug.WriteLine("Android UnhandledExceptionRaiser: " + e.Exception?.ToString());
+            Debug.WriteLine("| Android UnhandledExceptionRaiser: " + e.Exception?.ToString());
         };
 #endif
 

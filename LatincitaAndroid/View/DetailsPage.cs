@@ -23,7 +23,7 @@ namespace LatincitaAndroid;
 
 public partial class DetailsPage : ContentPage
 {
-    private RadioProgramDetailsViewModel? viewModel;
+    private RadioProgramDetailsViewModel? viewModel = null;
 
     readonly ILogger logger;
     readonly IDeviceInfo deviceInfo;
@@ -37,7 +37,7 @@ public partial class DetailsPage : ContentPage
 
     public DetailsPage(IDeviceInfo deviceInfo, ILogger<DetailsPage> logger)
     {
-        Debug.WriteLine("DetailsPage Initializer called");
+        Debug.WriteLine("| DetailsPage Initializer called");
 
         InitializeComponent();
 
@@ -55,15 +55,15 @@ public partial class DetailsPage : ContentPage
 
         if (BindingContext is RadioProgramDetailsViewModel vm) {
 
-            Debug.WriteLine("PAGE LOADED");
+            Debug.WriteLine("| DetailsPage: PAGE LOADED");
 
             viewModel = vm;
 
             if (media_player_ready)
-                viewModel.MediaPlayer_Register(this.mediaPlayer);
+                viewModel.MediaPlayer_Register(this.mediaPlayer);  // we hope MediaPlayer is ready to start playing
 
             //if (!page_ready) {
-            //    Debug.WriteLine("sleeping for 500 secs");
+            //    Debug.WriteLine("| sleeping for 500 secs");
             //    await Task.Delay(500);
             //    page_ready = true;
             //}
@@ -89,13 +89,15 @@ public partial class DetailsPage : ContentPage
             viewModel.MediaPlayer_Unregister();
         }
         base.OnDisappearing();
+
+        media_player_ready = false;  // *** we hope next time we appear MediaPlayer_Loaded will get called!
     }
 
 
     protected override void OnBindingContextChanged()
     {
         base.OnBindingContextChanged();
-        Debug.WriteLine($"DetailsPage.OnBindingContextChanged BindingContext={BindingContext?.GetType().FullName ?? "null"}");
+        Debug.WriteLine($"| DetailsPage::OnBindingContextChanged BindingContext={BindingContext?.GetType().FullName ?? "null"}");
 
         Reset_Play_Buttons();
 
@@ -103,7 +105,7 @@ public partial class DetailsPage : ContentPage
             viewModel = vm;
 
             if (media_player_ready)
-                viewModel.MediaPlayer_Register(this.mediaPlayer);
+                viewModel.MediaPlayer_Register(this.mediaPlayer);  // we hope MediaPlayer is ready to start playing
 
             //vm.Mp3UrlChanged += OnMp3UrlChanged;
 
@@ -121,7 +123,7 @@ public partial class DetailsPage : ContentPage
     //}
     private void MediaPlayer_Loaded(object sender, EventArgs e)
     {
-        Debug.WriteLine("MEDIA-PLAYER: LOADED");
+        Debug.WriteLine("| DetailsPage: MEDIA-PLAYER: LOADED");
 
         if (viewModel != null) {
             viewModel.MediaPlayer_Register(this.mediaPlayer);
@@ -131,7 +133,7 @@ public partial class DetailsPage : ContentPage
 
     private async void MediaPlayer_MediaOpened(object sender, EventArgs args)
     {
-        Debug.WriteLine("MEDIA-PLAYER: MEDIA OPENED");
+        Debug.WriteLine("| DetailsPage: MEDIA-PLAYER: MEDIA OPENED");
 
         if (viewModel != null) {
             viewModel.MediaPlayer_MediaOpened(this.mediaPlayer); // seek needs to run on "main" thread
@@ -143,7 +145,7 @@ public partial class DetailsPage : ContentPage
         if (e.PropertyName == nameof(this.mediaPlayer.DurationProperty))
         {
             double max_secs = (int)this.mediaPlayer.Duration.TotalSeconds;
-            Debug.WriteLine($"Duration: {this.mediaPlayer.Duration}");
+            Debug.WriteLine($"| Duration: {this.mediaPlayer.Duration}");
 
             if ((viewModel != null) && (viewModel.ProgramListService != null)) {
                 int beg_offset = viewModel.ProgramListService.StartPosition;
@@ -169,26 +171,46 @@ public partial class DetailsPage : ContentPage
 
     void OnMediaOpened(object? sender, EventArgs? e)
     {
-        Debug.WriteLine("Media opened.");
+        Debug.WriteLine("| DetailsPage: Media opened.");
         Reset_Play_Buttons();
     }
 
     void OnStateChanged(object? sender, MediaStateChangedEventArgs e)
-    {   Debug.WriteLine($"Media State Changed. Old State: {e.PreviousState}, New State: {e.NewState}");
+    {   Debug.WriteLine($"| DetailsPage: Media State Changed. Old State: {e.PreviousState}, New State: {e.NewState}");
+        if (viewModel != null) {
+            bool is_playing = false;
+            switch(e.NewState) {
+                case MediaElementState.Playing:
+                case MediaElementState.Paused:
+                    is_playing = true;
+                    break;
+                default:
+                    is_playing = false;
+                    break;
+            }
+            viewModel.ProgramListService.isPlaying = is_playing;
+        }
         Manage_Play_Buttons();
     }
 
     void OnMediaFailed(object? sender, MediaFailedEventArgs e)
-    {   Debug.WriteLine($"Media failed. Error: {e.ErrorMessage}");
+    {   Debug.WriteLine($"| DetailsPage: Media failed. Error: {e.ErrorMessage}");
         Reset_Play_Buttons();
-    //  viewModel.AudioPlaybackService.ResumeAfterSongEnds(); // seek needs to run on "main" thread
+    //  viewModel.AudioPlaybackService.ResumeAfterSongEnds();
     }
 
     void OnMediaEnded(object? sender, EventArgs? e)
     {
-        Debug.WriteLine("Media ended.");
+        Debug.WriteLine("| DetailsPage: Media ended.");
         Reset_Play_Buttons();
-        viewModel.MediaPlayer_MediaEnded(); // seek needs to run on "main" thread
+
+        // tell AudioPlaybackService to read next track from Queue and play it
+        //
+        // if there is no track waiting in the queue, and we are in RANDOM mode,
+        // we need to fetch a new RANDOM, add it to the CurrentTrackList
+        // and push it on to the QUEUE
+
+        viewModel.MediaPlayer_MediaEnded();
     }
 
     async void OnPositionChanged(object? sender, MediaPositionChangedEventArgs e)
@@ -205,12 +227,17 @@ public partial class DetailsPage : ContentPage
 
             if (_track != null) {
 
-                viewModel.ProgramListService.SetTrack(_track);
+                if (String.IsNullOrEmpty(viewModel.ProgramListService.CurrentTrack.id) || 
+                    (_track.id != viewModel.ProgramListService.CurrentTrack.id)) {
+
+                    viewModel.ProgramListService.SetTrack(_track);
+
+                    Debug.WriteLine($"| Selected {_track.article_title} - begin {_track.offset}  end {_track.nxtoffset}");
+                }
 
                 //viewModel.ProgramListService.CurrentTrack = _track;
                 //viewModel.ProgramListService.StartPosition = _track.offset;
                 //viewModel.ProgramListService.EndPosition = _track.nxtoffset;
-                Debug.WriteLine($"Selected {_track.article_title} - begin {_track.offset}  end {_track.nxtoffset}");
             }
             this.current_media_source = mediaElement.Source;
         }
@@ -221,9 +248,46 @@ public partial class DetailsPage : ContentPage
             int tcurr_offset = curr_offset;
             if ((tnxt_offset > 0) && (tcurr_offset >= tnxt_offset)) {
                 if ((tbeg_offset >= 0) && (tcurr_offset >= tbeg_offset) && (tnxt_offset >= tbeg_offset)) {
-                    Debug.WriteLine($"Position {tcurr_offset} reached EndPosition {tnxt_offset}, stopping playback.");
+                    Debug.WriteLine($"| Position {tcurr_offset} reached EndPosition {tnxt_offset}, stopping playback.");
                     // *** here is where we need to handle auto-play next track INSTEAD of just stopping
-                    OnStopClicked(this.mediaPlayer, null);
+
+                    if (viewModel.ProgramListService.CurrentType == RadioProgramType.RADIO) {
+                        // if track is an item from a RADIO
+                        // all we do is change the CurrentTrack so the next item is highlighted
+
+                        // actually we do nothing, because MP3 will continue to play and then code
+                        // up above will see that offset belongs to a new track and will
+                        // call SetTrack which highlights the new row in CurrentTrackList
+
+                        // however ... if this is the last track on the RADIO
+                        //             then we need to stop playing
+
+                        TrackObject curr_track = viewModel.ProgramListService.CurrentTrack;
+
+                        Boolean is_last = await viewModel.ProgramListService.IsLastTrack(curr_track);
+
+                        if (is_last) {
+
+                            OnStopClicked(this.mediaPlayer, null);
+
+                            Reset_Play_Buttons();
+
+                            viewModel.MediaPlayer_MediaEnded();
+
+                        } else {
+
+                            viewModel.MediaPlayer_TrackEnded();
+                        }
+
+                    } else {
+                        // For all other types we pretend OnMediaEnded event was thrown
+
+                        OnStopClicked(this.mediaPlayer, null);
+
+                        Reset_Play_Buttons();
+
+                        viewModel.MediaPlayer_MediaEnded();
+                    }
                     return;
                 }
             }
@@ -274,13 +338,13 @@ public partial class DetailsPage : ContentPage
         if (pos_secs > max_secs)
             pos_secs = max_secs;
         // slider runs from beg_offset to nxt_offset
-        Debug.WriteLine($"Position changed to {curr_offset}");
+    //  Debug.WriteLine($"| DetailsPage: Position changed to {curr_offset}");
         PositionSlider.Maximum = max_secs;
         PositionSlider.Value = pos_secs;
     }
 
     void OnSeekCompleted(object? sender, EventArgs? e) {
-        Debug.WriteLine("Seek completed.");
+        Debug.WriteLine("| DetailsPage: Seek completed.");
         if (auto_play_source != null) {
             if (auto_play_source.ToString() == this.mediaPlayer.Source.ToString()) {
                 auto_play_source = null;
@@ -337,21 +401,21 @@ public partial class DetailsPage : ContentPage
 
         //private async void Load_URL(string url, bool auto_play)
         //{
-        //    Debug.WriteLine($">>> DetailsPage:Load_URL({url},{auto_play})");
+        //    Debug.WriteLine($"| >>> DetailsPage:Load_URL({url},{auto_play})");
 
         //    if (String.IsNullOrWhiteSpace(url)) {
         //        return;
         //    }
 
         //    if (!page_ready) { // && media_player_ready <<< media-player not calling MediaPlayer_Loaded on Android
-        //        Debug.WriteLine($">>> page/player not ready - regretfully ignoring laod command");
+        //        Debug.WriteLine($"| >>> page/player not ready - regretfully ignoring laod command");
         //        return;
         //    }
         //    url = HttpUtility.UrlDecode(url);  // ChatGPT says undo url encoding
 
         //    bool url_unchanged = IsSameMediaUrlIgnoringDomain(this.mediaPlayer.Source, url);
 
-        //    Debug.WriteLine($">>> => {url}");
+        //    Debug.WriteLine($"| >>> => {url}");
 
         //    if (!url_unchanged) {
         //        Reset_Play_Buttons();  // would have to first call w/ empty URL to get us to reset play buttons
@@ -373,21 +437,21 @@ public partial class DetailsPage : ContentPage
         //                    this.mediaPlayer.Source = null;
         //                //  this.mediaPlayer.Source = _src;
         //                    this.mediaPlayer.Source = MediaSource.FromUri(url); 
-        //                    Debug.WriteLine($">>> DetailsPage:Load_URL - Loading {url} succeeded");
+        //                    Debug.WriteLine($"| >>> DetailsPage:Load_URL - Loading {url} succeeded");
         //                } else {
-        //                    Debug.WriteLine($">>> DetailsPage:Load_URL - {url} already loaded");
+        //                    Debug.WriteLine($"| >>> DetailsPage:Load_URL - {url} already loaded");
         //                }
         //            } catch (COMException comEx) {
-        //                Debug.WriteLine($">>> DetailsPage:Load_URL - COMException loading media: {comEx.HResult:X} {comEx.Message}");
+        //                Debug.WriteLine($"| >>> DetailsPage:Load_URL - COMException loading media: {comEx.HResult:X} {comEx.Message}");
         //                await Shell.Current.DisplayAlert("Media Load error", "Unable to load {url} (platform error).", "OK");
         //            } catch (Exception exInner) {
-        //                Debug.WriteLine($">>> DetailsPage:Load_URL - Exception loading media: {exInner.GetType().FullName}: {exInner.Message}");
+        //                Debug.WriteLine($"| >>> DetailsPage:Load_URL - Exception loading media: {exInner.GetType().FullName}: {exInner.Message}");
         //                await Shell.Current.DisplayAlert("Media Load error", exInner.Message, "OK");
         //            }
         //        });
         //    } catch (Exception ex) {
         //        // Last-resort catch. Note: corrupted-state exceptions may still escape.
-        //        Debug.WriteLine($">>> DetailsPage:Load_URL - Media-Load top-level exception: {ex.GetType().FullName}: {ex.Message}");
+        //        Debug.WriteLine($"| >>> DetailsPage:Load_URL - Media-Load top-level exception: {ex.GetType().FullName}: {ex.Message}");
         //        try { await Shell.Current.DisplayAlert("Error", ex.Message, "OK"); } catch { }
         //    }
         //}
@@ -497,16 +561,16 @@ public partial class DetailsPage : ContentPage
                 try
                 {
                     this.mediaPlayer.Play();
-                    Debug.WriteLine($"Play succeeded");
+                    Debug.WriteLine($"| Play succeeded");
                 }
                 catch (COMException comEx)
                 {
-                    Debug.WriteLine($"COMException during Play: {comEx.HResult:X} {comEx.Message}");
+                    Debug.WriteLine($"| COMException during Play: {comEx.HResult:X} {comEx.Message}");
                     await Shell.Current.DisplayAlert("Playback error", "Unable to Play the media (platform error).", "OK");
                 }
                 catch (Exception exInner)
                 {
-                    Debug.WriteLine($"Exception during Play: {exInner.GetType().FullName}: {exInner.Message}");
+                    Debug.WriteLine($"| Exception during Play: {exInner.GetType().FullName}: {exInner.Message}");
                     await Shell.Current.DisplayAlert("Playback error", exInner.Message, "OK");
                 }
             });
@@ -514,7 +578,7 @@ public partial class DetailsPage : ContentPage
         catch (Exception ex)
         {
             // Last-resort catch. Note: corrupted-state exceptions may still escape.
-            Debug.WriteLine($"PLAY top-level exception: {ex.GetType().FullName}: {ex.Message}");
+            Debug.WriteLine($"| PLAY top-level exception: {ex.GetType().FullName}: {ex.Message}");
             try { await Shell.Current.DisplayAlert("Error", ex.Message, "OK"); } catch { }
         }
     }
@@ -529,16 +593,16 @@ public partial class DetailsPage : ContentPage
                 try
                 {
                     this.mediaPlayer.Pause();
-                    Debug.WriteLine($"Pause succeeded");
+                    Debug.WriteLine($"| Pause succeeded");
                 }
                 catch (COMException comEx)
                 {
-                    Debug.WriteLine($"COMException during Pause: {comEx.HResult:X} {comEx.Message}");
+                    Debug.WriteLine($"| COMException during Pause: {comEx.HResult:X} {comEx.Message}");
                     await Shell.Current.DisplayAlert("Playback error", "Unable to Pause the media (platform error).", "OK");
                 }
                 catch (Exception exInner)
                 {
-                    Debug.WriteLine($"Exception during Pause: {exInner.GetType().FullName}: {exInner.Message}");
+                    Debug.WriteLine($"| Exception during Pause: {exInner.GetType().FullName}: {exInner.Message}");
                     await Shell.Current.DisplayAlert("Playback error", exInner.Message, "OK");
                 }
             });
@@ -546,7 +610,7 @@ public partial class DetailsPage : ContentPage
         catch (Exception ex)
         {
             // Last-resort catch. Note: corrupted-state exceptions may still escape.
-            Debug.WriteLine($"PAUSE top-level exception: {ex.GetType().FullName}: {ex.Message}");
+            Debug.WriteLine($"| PAUSE top-level exception: {ex.GetType().FullName}: {ex.Message}");
             try { await Shell.Current.DisplayAlert("Error", ex.Message, "OK"); } catch { }
         }
     }
@@ -561,16 +625,16 @@ public partial class DetailsPage : ContentPage
                 try
                 {
                     this.mediaPlayer.Stop();
-                    Debug.WriteLine($"Stop succeeded");
+                    Debug.WriteLine($"| Stop succeeded");
                 }
                 catch (COMException comEx)
                 {
-                    Debug.WriteLine($"COMException during Stop: {comEx.HResult:X} {comEx.Message}");
+                    Debug.WriteLine($"| COMException during Stop: {comEx.HResult:X} {comEx.Message}");
                     await Shell.Current.DisplayAlert("Playback error", "Unable to Stop the media (platform error).", "OK");
                 }
                 catch (Exception exInner)
                 {
-                    Debug.WriteLine($"Exception during Stop: {exInner.GetType().FullName}: {exInner.Message}");
+                    Debug.WriteLine($"| Exception during Stop: {exInner.GetType().FullName}: {exInner.Message}");
                     await Shell.Current.DisplayAlert("Playback error", exInner.Message, "OK");
                 }
             });
@@ -578,7 +642,7 @@ public partial class DetailsPage : ContentPage
         catch (Exception ex)
         {
             // Last-resort catch. Note: corrupted-state exceptions may still escape.
-            Debug.WriteLine($"STOP top-level exception: {ex.GetType().FullName}: {ex.Message}");
+            Debug.WriteLine($"| STOP top-level exception: {ex.GetType().FullName}: {ex.Message}");
             try { await Shell.Current.DisplayAlert("Error", ex.Message, "OK"); } catch { }
         }
     }

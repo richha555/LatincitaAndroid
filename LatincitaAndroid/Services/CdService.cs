@@ -45,7 +45,7 @@ public class CdService
             new MediaTypeWithQualityHeaderValue("application/json"));
 
         var url = "https://www.latincita.com/api/cd";
-        Debug.WriteLine(">>> URL: " + url);
+        Debug.WriteLine("| >>> URL: " + url);
 
         // Online
         var response = await httpClient.GetAsync(url);

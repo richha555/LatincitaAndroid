@@ -59,7 +59,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
 
         //  TrackObject _track = await AllLatincitaService.get_track(RadioProgram);
 
-        Debug.WriteLine("SELECT PROGRAM: " + RadioProgram.ArticleTitle);
+        Debug.WriteLine("| SELECT PROGRAM: " + RadioProgram.ArticleTitle);
 
         await Task.Run(() =>
         {
@@ -67,7 +67,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
             //  ProgramListService.SetTrack(_track);
         });
 
-        Debug.WriteLine("< GOTO DETAIL PAGE >");
+        Debug.WriteLine("| < GOTO DETAIL PAGE >");
 
         await Shell.Current.GoToAsync(nameof(DetailsPage), true, new Dictionary<string, object>
         {
@@ -135,7 +135,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
             have_radio = ProgramListService.RadioPrograms.Any(x => x.Type == RadioProgramType.RADIO);
 
             if (have_radio) {
-                Debug.WriteLine("Skipping loading Radio-Programs as they are already loaded.");
+                Debug.WriteLine("| Skipping loading Radio-Programs as they are already loaded.");
                 //await Shell.Current.DisplayAlert("Load All Radio Programs",
                 //    $"Radio-Programs appear to be already loaded - skipping load.", "OK");
                 return;
@@ -162,7 +162,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
 
         } catch (Exception ex)
         {
-            Debug.WriteLine($"Unable to get RadioPrograms: {ex.Message}");
+            Debug.WriteLine($"| Unable to get RadioPrograms: {ex.Message}");
             await Shell.Current.DisplayAlert("Error!", ex.Message, "OK");
         }
         finally
@@ -195,7 +195,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
             have_cds = ProgramListService.RadioPrograms.Any(x => x.Type == RadioProgramType.CD);
 
             if (have_cds) {
-                Debug.WriteLine("Skipping loading CD's as they are already loaded.");
+                Debug.WriteLine("| Skipping loading CD's as they are already loaded.");
                 //await Shell.Current.DisplayAlert("Load All Radio Programs",
                 //    $"Radio-Programs appear to be already loaded - skipping load.", "OK");
                 return;
@@ -221,7 +221,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
             //}
 
         } catch (Exception ex) {
-            Debug.WriteLine($"Unable to get CD's: {ex.Message}");
+            Debug.WriteLine($"| Unable to get CD's: {ex.Message}");
             await Shell.Current.DisplayAlert("Error!", ex.Message, "OK");
         } finally {
             IsBusy = false;
@@ -254,7 +254,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
             have_favorites = ProgramListService.RadioPrograms.Any(x => x.Type == RadioProgramType.FAVORITE);
 
             if (have_favorites) {
-                Debug.WriteLine("Skipping loading Favorites as they are already loaded.");
+                Debug.WriteLine("| Skipping loading Favorites as they are already loaded.");
                 //await Shell.Current.DisplayAlert("Load All Radio Programs",
                 //    $"Radio-Programs appear to be already loaded - skipping load.", "OK");
                 return;
@@ -280,7 +280,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
             //}
 
         } catch (Exception ex) {
-            Debug.WriteLine($"Unable to get Favorites: {ex.Message}");
+            Debug.WriteLine($"| Unable to get Favorites: {ex.Message}");
             await Shell.Current.DisplayAlert("Error!", ex.Message, "OK");
         } finally {
             IsBusy = false;
@@ -328,7 +328,7 @@ public partial class RadioProgramsViewModel : BaseViewModel
 
         } catch (Exception ex)
         {
-            Debug.WriteLine($"Unable to get Random Track: {ex.Message}");
+            Debug.WriteLine($"| Unable to get Random Track: {ex.Message}");
             await Shell.Current.DisplayAlert("Error!", ex.Message, "OK");
         }
         finally

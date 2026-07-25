@@ -44,7 +44,7 @@ public class RadioProgramsService
             new MediaTypeWithQualityHeaderValue("application/json"));
 
         var url = "https://www.latincita.com/api/radio";
-        Debug.WriteLine(">>> URL: " + url);
+        Debug.WriteLine("| >>> URL: " + url);
 
         // Online
         var response = await httpClient.GetAsync(url);

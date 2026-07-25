@@ -219,7 +219,7 @@
 			            Grid.Row="4"
 			            Margin="10,0,10,0"
                         MaximumWidthRequest="740"
-                        ItemsSource="{Binding ProgramListService.CurrentTrackList}"
+                        ItemsSource="{Binding ProgramListService.CurrentVisibleTrackList}"
                         IsVisible="{Binding ProgramListService.ShowTrackListWithTimestamps}"
                         SelectionMode="None">
 
@@ -239,7 +239,7 @@
 
                     <!-- Row template -->
                     <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="model:TrackObject">
+                        <DataTemplate x:DataType="model:VisibleTrackObject">
                             <!--      Class="{Binding background_class, Converter={StaticResource StyleClassConverter}}" -->
                             <Grid ColumnDefinitions="60,*"
                                   Padding="0"
@@ -248,7 +248,7 @@
                                 <Grid.Triggers>
                                     <DataTrigger
                                             TargetType="Grid"
-                                            Binding="{Binding isCurrentRow}"
+                                            Binding="{Binding IsCurrentRow}"
                                             Value="True">
                                         <Setter
                                             Property="Style"
@@ -257,12 +257,12 @@
                                 </Grid.Triggers>
 
                                 <Label
-                                    Text="{Binding start_time}"
+                                    Text="{Binding Start_time}"
                                     VerticalOptions="Center"
                                     HorizontalTextAlignment="Start" />
                                 <Label
                                     Grid.Column="1"
-                                    Text="{Binding article_title}"
+                                    Text="{Binding Article_title}"
                                     LineBreakMode="TailTruncation"
                                     VerticalOptions="Center" />
                             </Grid>
@@ -276,7 +276,7 @@
 			            Grid.Row="4"
 			            Margin="10,0,10,0"
                         MaximumWidthRequest="740"
-                        ItemsSource="{Binding ProgramListService.CurrentTrackList}"
+                        ItemsSource="{Binding ProgramListService.CurrentVisibleTrackList}"
                         IsVisible="{Binding ProgramListService.ShowTrackListWithNoTimestamps}"
                         SelectionMode="None">
 
@@ -296,7 +296,7 @@
 
                     <!-- Row template -->
                     <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="model:TrackObject">
+                        <DataTemplate x:DataType="model:VisibleTrackObject">
                         <!--      Class="{Binding background_class, Converter={StaticResource StyleClassConverter}}" -->
                             <Grid ColumnDefinitions="200,*"
                                   Padding="0"
@@ -305,7 +305,7 @@
                                 <Grid.Triggers>
                                     <DataTrigger
                                             TargetType="Grid"
-                                            Binding="{Binding isCurrentRow}"
+                                            Binding="{Binding IsCurrentRow}"
                                             Value="True">
                                         <Setter
                                             Property="Style"
@@ -314,12 +314,12 @@
                                 </Grid.Triggers>
 
                                 <Label
-                                    Text="{Binding song}"
+                                    Text="{Binding Song}"
                                     VerticalOptions="Center"
                                     HorizontalTextAlignment="Start" />
                                 <Label
                                     Grid.Column="1"
-                                    Text="{Binding artist}"
+                                    Text="{Binding Artist}"
                                     LineBreakMode="TailTruncation"
                                     VerticalOptions="Center" />
                             </Grid>

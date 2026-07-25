@@ -45,7 +45,7 @@ public class FavoriteService
             new MediaTypeWithQualityHeaderValue("application/json"));
 
         var url = "https://www.latincita.com/api/play";
-        Debug.WriteLine(">>> URL: " + url);
+        Debug.WriteLine("| >>> URL: " + url);
 
         // Online
         var response = await httpClient.GetAsync(url);

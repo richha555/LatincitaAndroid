@@ -150,6 +150,13 @@ public static class TrackConstants
 
 public class TrackObject
 {
+    //public event PropertyChangedEventHandler? PropertyChanged;
+
+    //protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    //{
+    //    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    //}
+
     public string id { get; set; } = "";    // 526.01   ... if csv.TrackNumber > 0 then
                                             //                   id = csv.RadioID + "." + csv.TrackNumber
                                             //                   csv.SongID 1821 : RadioID: 526  TrackNumber: 1  => id = 526.01
@@ -230,9 +237,6 @@ public class TrackObject
             return s;
         }
     }
-
-    public bool isCurrentRow { get; set; }
-    public string background_class { get; set; }
 
     public Action<string>? OnMp3Changed;
 

@@ -42,7 +42,7 @@ public class RandomService
             new MediaTypeWithQualityHeaderValue("application/json"));
 
         var url = "https://www.latincita.com/api/all/random";
-        Debug.WriteLine(">>> URL: " + url);
+        Debug.WriteLine("| >>> URL: " + url);
 
         var errmsg = "";
         var response = await httpClient.GetAsync(url);

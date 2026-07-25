@@ -60,9 +60,10 @@ public class AllLatincitaService
             if (p >= 0) 
                 mp3 = mp3.Substring(p + 1);
         }
-        //if (this.AllLatincitaList.ContainsKey(RadioProgram.ID)) {
-        //    track = this.AllLatincitaList[RadioProgram.ID];
-        //    if (track.article_title == RadioProgram.ArticleTitle && track.song_url.Contains(mp3,StringComparison.InvariantCultureIgnoreCase)) {
+        //string sid = RadioProgram.ID.ToString();      --- RadioProgram.ID has nothing to do with AllLatincitaList[sid]
+        //if (this.AllLatincitaList.ContainsKey(sid)) {
+        //    track = this.AllLatincitaList[sid];
+        //    if (track.article_title == RadioProgram.ArticleTitle && track.mp3.Contains(mp3, StringComparison.InvariantCultureIgnoreCase)) {
         //        return track;
         //    }
         //}
@@ -144,15 +145,6 @@ public class AllLatincitaService
         // RadioID of each track = RadioID of track provided
         foreach (TrackObject _track in this.AllLatincitaList.Values) {
             if ((Track.radioid == _track.radioid) && (_track.mp3 == Track.mp3)) {
-
-                if (_track.offset == Track.offset) {                 // *** WHAT IS LOGIC HERE ??
-                    _track.background_class = "HighlightedRowStyle";
-                    _track.isCurrentRow = true;
-                } else {
-                    _track.background_class = "DefaultRowStyle";
-                    _track.isCurrentRow = false;
-                }
-
                 tracks.Add(_track);
             }
         }
@@ -265,7 +257,7 @@ public class AllLatincitaService
                 fetch_what = "All Latincita";
                 break;
         }
-        Debug.WriteLine(">>> " + fetch_what + "  URL: " + url);
+        Debug.WriteLine("| >>> " + fetch_what + "  URL: " + url);
 
         string csv = "";
         string error_message = "no data returned";
@@ -279,15 +271,15 @@ public class AllLatincitaService
         } catch (HttpRequestException ex) {
             // Server unavailable, DNS failure, HTTP error, etc.
             error_message = "HTTP: " + ex.Message;
-            Debug.WriteLine($"HTTP Error: {ex.Message}\n{ex.InnerException}");
+            Debug.WriteLine($"| HTTP Error: {ex.Message}\n{ex.InnerException}");
         } catch (TaskCanceledException ex) {
             // Timeout (or cancellation)
             error_message = "Timeout";
-            Debug.WriteLine($"Timeout: {ex.Message}\n{ex.InnerException}");
+            Debug.WriteLine($"| Timeout: {ex.Message}\n{ex.InnerException}");
         } catch (Exception ex) {
             // Anything unexpected
             error_message = ex.Message;
-            Debug.WriteLine($"Unexpected Error: {ex.Message}\n{ex.InnerException}");
+            Debug.WriteLine($"| Unexpected Error: {ex.Message}\n{ex.InnerException}");
         }
 
         if (!String.IsNullOrWhiteSpace(csv)) {
