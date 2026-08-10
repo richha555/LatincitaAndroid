@@ -125,7 +125,7 @@ namespace LatincitaAndroid.Services
 
             PlayListItem pitem = CurrentPlayListItem;
 
-            if (int.Parse(track.id) != pitem.id) {
+            if ((int.Parse(track.id) != pitem.id) && (track.radioid != int.Parse(pitem.songid))) {
                 Debug.WriteLine(String.Format("AudioPlaybackService::Select_Track_from_TrackList: requested different track then loaded track"));
                 return false;
             }

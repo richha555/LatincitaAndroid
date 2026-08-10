@@ -638,7 +638,7 @@ public partial class ProgramListService : ObservableObject
         TrackObject prev_track = new();
         TrackObject the_track = new();
         if (!is_first) {
-            prev_track = await Next_Track();
+            prev_track = await Prev_Track();
         } else {
             prev_track = await Last_Track();
         }
@@ -654,11 +654,9 @@ public partial class ProgramListService : ObservableObject
                 }
             }
         } else {
-            // if this is not a radio, we just tell the AudioPlaybackService to fetch the next item from the queue
-            // and push it to the MediaPlayer
-
-            // if this is a RANDOM and the queue is empty,
-            //    we need to fetch a new RANDOM, add it to the CurrentTrackList and push it onto the Queue
+            // if this is not a radio
+            // we need to figure out what the previous item was on the queue.
+            // actually we probably want to go to the playlist and somehow load the previous item on the playlist
         }
         return the_track;
     }

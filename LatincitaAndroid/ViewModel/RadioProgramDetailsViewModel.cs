@@ -184,7 +184,9 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
 
             // no next track ... end of show
 
-            this.AudioPlaybackService.MediaPlayer_MediaEnded();
+            //  this.AudioPlaybackService.MediaPlayer_MediaEnded();
+
+            await this.MediaPlayer_MediaEnded();
 
         } else {
             TrackListItem track_item = this.AudioPlaybackService.CurrentTrackListItem;

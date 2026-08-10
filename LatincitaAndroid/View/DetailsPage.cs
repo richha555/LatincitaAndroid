@@ -272,7 +272,7 @@ public partial class DetailsPage : ContentPage
 
                             Reset_Play_Buttons();
 
-                            viewModel.MediaPlayer_MediaEnded();
+                            await viewModel.MediaPlayer_MediaEnded();
 
                         } else {
 
@@ -286,7 +286,7 @@ public partial class DetailsPage : ContentPage
 
                         Reset_Play_Buttons();
 
-                        viewModel.MediaPlayer_MediaEnded();
+                        await viewModel.MediaPlayer_MediaEnded();
                     }
                     return;
                 }
@@ -505,40 +505,55 @@ public partial class DetailsPage : ContentPage
                 break;
         }
     }
-    private void OnNextTrackClicked(object? sender, EventArgs? e)
+    private async void OnNextTrackClicked(object? sender, EventArgs? e)
     {
         if (this.mediaPlayer == null) {
             return;
         }
+        if (viewModel.ProgramListService.CurrentType == RadioProgramType.RADIO) {
+            await viewModel.GoTo_Next_Track();
+            return;
+        }
+
         var curr_state = this.mediaPlayer.CurrentState;
         switch (curr_state) {
             case MediaElementState.Playing:
             case MediaElementState.Paused:
+                    //  playing radio tracks:  don't stop playing, just move play-head
                 OnStopClicked(sender, e);
                 break;
             default:
                 // do nothing
                 break;
         }
-        viewModel.GoTo_Next_Track();
+        // act as if media ended
+        await viewModel.MediaPlayer_MediaEnded();
     }
 
-    private void OnPrevTrackClicked(object? sender, EventArgs? e)
+    private async void OnPrevTrackClicked(object? sender, EventArgs? e)
     {
         if (this.mediaPlayer == null) {
+            return;
+        }
+        if (viewModel.ProgramListService.CurrentType == RadioProgramType.RADIO) {
+            await viewModel.GoTo_Prev_Track();
             return;
         }
         var curr_state = this.mediaPlayer.CurrentState;
         switch (curr_state) {
             case MediaElementState.Playing:
             case MediaElementState.Paused:
-                OnStopClicked(sender, e);
+                if (viewModel.ProgramListService.CurrentType == RadioProgramType.RADIO) {
+                    //  playing radio tracks:  don't stop playing, just move play-head
+                } else {
+                    OnStopClicked(sender, e);
+                }
                 break;
             default:
                 // do nothing
                 break;
         }
-        viewModel.GoTo_Prev_Track();
+        // *** now what ??
     }
 
 
