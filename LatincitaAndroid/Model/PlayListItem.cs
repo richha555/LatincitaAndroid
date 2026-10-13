@@ -43,10 +43,12 @@ namespace LatincitaAndroid.Model
         public int useWma { get; set; }
         public bool entireRadio { get; set; }
         public string songid { get; set; }
-        public int id { get; set; }
+        public int id { get; set; } // theFsongs[id] = cTrackObject on LATINCITA.COM
         public List<TrackListItem> track_list { get; set; }  // should not need these, we try to create a PlayListItem for each track on a RADIO
         public PlayListItemImage image { get; set; }
         public List<TrackListItem> video_list { get; set; }
+
+        public TrackObject track { get; set; }
 
         public string played_list { get; set; }
 

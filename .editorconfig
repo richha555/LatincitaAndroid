@@ -1,0 +1,28 @@
+root = true
+
+[*.{cs,csx}]
+# Use spaces and 4 spaces per indent to match the project
+indent_style = space
+indent_size = 4
+
+# Preserve existing leading whitespace; avoid trimming that could shift existing lines
+trim_trailing_whitespace = false
+
+# Disable Roslyn formatting analyzer that can trigger automated formatting edits
+dotnet_diagnostic.IDE0055.severity = none
+
+# Disable other formatting-related diagnostics that may trigger auto-fixes
+dotnet_diagnostic.IDE0060.severity = none
+dotnet_diagnostic.IDE0066.severity = none
+
+# C# editor options: prefer minimal automatic reindent behavior
+# These settings instruct the formatter to avoid changing indentation of existing blocks
+csharp_indent_block_contents = false
+csharp_indent_braces = false
+csharp_indent_case_contents = false
+csharp_indent_labels = false
+csharp_indent_switch_labels = false
+
+# Do not apply code style fixes automatically from the editorconfig
+dotnet_style_qualification_for_field = false:silent
+dotnet_style_qualification_for_property = false:silent

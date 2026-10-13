@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
+	x:Name="PageRoot"
 	x:Class="LatincitaAndroid.View.MainPage"
 	xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
@@ -49,7 +50,11 @@
                         <Grid Padding="10" HorizontalOptions="Fill">
                             <Border HeightRequest="125" Style="{StaticResource CardView}">
                                 <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:RadioProgramsViewModel}}, x:DataType=viewmodel:RadioProgramsModel, Path=GoToDetailsCommand}" CommandParameter="{Binding .}" />
+                                <!-- ChatGPT removed x:DataType=viewmodel:RadioProgramsModel -->
+                                <!--<TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:RadioProgramsViewModel}}, x:DataType=viewmodel:RadioProgramsModel, Path=GoToDetailsCommand}" CommandParameter="{Binding .}" />-->
+                                <!-- Copilot changed the binding from GoToDetailsCommand to OnItemTapped -->
+                                <!--<TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:RadioProgramsViewModel}},                                          Path=GoToDetailsCommand}" CommandParameter="{Binding .}" />-->
+                                    <TapGestureRecognizer Tapped="OnItemTapped" />
                                 </Border.GestureRecognizers>
                                 <Grid Padding="0" ColumnDefinitions="125,*">
                                     <Image

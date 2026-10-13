@@ -31,6 +31,8 @@ public partial class DetailsPage : ContentPage
     private bool page_ready = false;
     private bool media_player_ready = false;
 
+    private bool processing_move = false;
+
     private MediaSource current_media_source = null;
 
     private MediaSource auto_play_source;
@@ -199,7 +201,7 @@ public partial class DetailsPage : ContentPage
     //  viewModel.AudioPlaybackService.ResumeAfterSongEnds();
     }
 
-    void OnMediaEnded(object? sender, EventArgs? e)
+    async void OnMediaEnded(object? sender, EventArgs? e)
     {
         Debug.WriteLine("| DetailsPage: Media ended.");
         Reset_Play_Buttons();
@@ -210,14 +212,22 @@ public partial class DetailsPage : ContentPage
         // we need to fetch a new RANDOM, add it to the CurrentTrackList
         // and push it on to the QUEUE
 
-        viewModel.MediaPlayer_MediaEnded();
+        await viewModel.MediaPlayer_MediaEnded();
     }
 
     async void OnPositionChanged(object? sender, MediaPositionChangedEventArgs e)
     {
+        if (processing_move) return;
+        processing_move = true;
+
         MediaElement mediaElement = (MediaElement)sender;
         int curr_offset = (int)e.Position.TotalSeconds;
 
+        await Task.Run(() => { Process_Move(mediaElement,curr_offset); });
+    }
+
+    async void Process_Move ( MediaElement mediaElement, int curr_offset)
+    {
         // for radio's we need to use offset to find item in CurrentTrackList
         // for other types, we just use URL to find item
         if (viewModel.ProgramListService.CurrentType == RadioProgramType.RADIO ||
@@ -227,8 +237,8 @@ public partial class DetailsPage : ContentPage
 
             if (_track != null) {
 
-                if (String.IsNullOrEmpty(viewModel.ProgramListService.CurrentTrack.id) || 
-                    (_track.id != viewModel.ProgramListService.CurrentTrack.id)) {
+                if (String.IsNullOrEmpty(viewModel.ProgramListService.CurrentTrack.id_str) || 
+                    (_track.id_str != viewModel.ProgramListService.CurrentTrack.id_str)) {
 
                     viewModel.ProgramListService.SetTrack(_track);
 
@@ -288,6 +298,7 @@ public partial class DetailsPage : ContentPage
 
                         await viewModel.MediaPlayer_MediaEnded();
                     }
+                    processing_move = false;
                     return;
                 }
             }
@@ -296,6 +307,7 @@ public partial class DetailsPage : ContentPage
         double max_secs = (int)this.mediaPlayer.Duration.TotalSeconds;
 
         if (max_secs < 2.0) {
+            processing_move = false;
             return;  // don't trust it
         }
         int beg_offset = 0;
@@ -341,6 +353,8 @@ public partial class DetailsPage : ContentPage
     //  Debug.WriteLine($"| DetailsPage: Position changed to {curr_offset}");
         PositionSlider.Maximum = max_secs;
         PositionSlider.Value = pos_secs;
+
+        processing_move = false;
     }
 
     void OnSeekCompleted(object? sender, EventArgs? e) {
@@ -519,14 +533,20 @@ public partial class DetailsPage : ContentPage
         switch (curr_state) {
             case MediaElementState.Playing:
             case MediaElementState.Paused:
+                if (viewModel.ProgramListService.CurrentType == RadioProgramType.RADIO) {
                     //  playing radio tracks:  don't stop playing, just move play-head
-                OnStopClicked(sender, e);
+                    //  handled above
+                } else {
+                    OnStopClicked(sender, e);
+                }   
                 break;
             default:
                 // do nothing
                 break;
         }
+
         // act as if media ended
+        // for RANDOM this will auto-fetch a new track
         await viewModel.MediaPlayer_MediaEnded();
     }
 
@@ -539,12 +559,14 @@ public partial class DetailsPage : ContentPage
             await viewModel.GoTo_Prev_Track();
             return;
         }
+
         var curr_state = this.mediaPlayer.CurrentState;
         switch (curr_state) {
             case MediaElementState.Playing:
             case MediaElementState.Paused:
                 if (viewModel.ProgramListService.CurrentType == RadioProgramType.RADIO) {
                     //  playing radio tracks:  don't stop playing, just move play-head
+                    //  handled above
                 } else {
                     OnStopClicked(sender, e);
                 }
@@ -553,7 +575,9 @@ public partial class DetailsPage : ContentPage
                 // do nothing
                 break;
         }
-        // *** now what ??
+
+        // non-radio, move back to previous item in queue
+        await viewModel.GoTo_Prev_Track();
     }
 
 

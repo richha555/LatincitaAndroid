@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+	x:Name="PageRoot"
+	x:Class="LatincitaAndroid.View.MainPage"
+	xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+	xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
+	xmlns:model="clr-namespace:LatincitaAndroid.Model"
+	xmlns:viewmodel="clr-namespace:LatincitaAndroid.ViewModel"
+	Title="{Binding PageTitle}"
+	ios:Page.UseSafeArea="True"
+	x:DataType="viewmodel:RadioProgramsViewModel">
+    <!--BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground},
+		                                  Dark={StaticResource DarkBackground}}"-->
+    <Grid
+	    BackgroundColor="Black"
+	    ColumnDefinitions="*,*"
+	    ColumnSpacing="0"
+	    RowDefinitions="*,Auto,Auto"
+	    RowSpacing="0">
+        <RefreshView
+		    Grid.ColumnSpan="2"
+		    Command="{Binding RefreshProgramsCommand}"
+		    IsRefreshing="{Binding IsRefreshing}">
+            <CollectionView ItemsSource="{Binding ProgramListService.RadioPrograms}" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <!--<StackLayout Padding="0" BackgroundColor="Black">-->
+                    <Grid x:Name="ImageContainer"
+                          VerticalOptions="Start"
+                          Padding="0,10,0,0">
+                            <!--<Image
+						    HeightRequest="160"
+						    HorizontalOptions="Center"
+						    Source="nodata.png"
+						    VerticalOptions="Center"
+						    WidthRequest="160" />-->
+                        <!--        top,right,bottom,left-->
+                        <Image x:Name="MainImage"
+                            Margin="0,0,0,0"						    
+                            HorizontalOptions="Center"
+						    Source="waiting_for_latincita_2.jpg"
+                            Aspect="AspectFill"
+                            VerticalOptions="Start"
+						/>
+                    </Grid>
+                    <!--</StackLayout>-->
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="model:RadioProgram">
+                        <Grid Padding="10" HorizontalOptions="Fill">
+                            <Border HeightRequest="125" Style="{StaticResource CardView}">
+								<Border.GestureRecognizers>
+									<!-- Use an event handler in the page code-behind to reliably handle taps from inside the DataTemplate -->
+									<TapGestureRecognizer Tapped="OnItemTapped" />
+								</Border.GestureRecognizers>
+                                <Grid Padding="0" ColumnDefinitions="125,*">
+                                    <Image
+									    Aspect="AspectFill"
+									    HeightRequest="125"
+									    Source="{Binding PictureURL}"
+									    WidthRequest="125" />
+                                    <VerticalStackLayout
+									    Grid.Column="1"
+                                        Margin="0,-8,0,0"
+									    Padding="10"
+									    VerticalOptions="Center">
+                                        <Label Style="{StaticResource LargeLabel}" Text="{Binding ArticleTitle}" />
+                                        <Label Style="{StaticResource MediumLabel}" Text="{Binding RecordedOnMY}" /> <!-- , StringFormat='{0:MMMM yyyy}' -->
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <ActivityIndicator
+		    Grid.RowSpan="2"
+		    Grid.ColumnSpan="2"
+		    HorizontalOptions="Fill"
+		    IsRunning="{Binding IsBusy}"
+		    IsVisible="{Binding IsBusy}"
+		    VerticalOptions="Center"
+		    Color="{StaticResource Primary}" />
+
+        <Button
+		    Grid.Row="1"
+		    Grid.Column="0"
+		    Margin="8,8,4,4"
+		    Command="{Binding GetRadioProgramsCommand}"
+		    IsEnabled="{Binding IsNotBusy}"
+	        Style="{StaticResource HoverButtonStyle}"
+		    Text="Load All RADIO Programs">
+			<Button.Triggers >
+				<DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="RADIO">
+					<Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+				</DataTrigger>
+			</Button.Triggers>
+		</Button>
+
+        <Button
+		    Grid.Row="1"
+		    Grid.Column="1"
+		    Margin="4,8,8,4"
+		    Command="{Binding GetRandomCommand}"
+		    IsEnabled="{Binding IsNotBusy}"
+		    Style="{StaticResource HoverButtonStyle}"
+		    Text="Select RANDOM Track" >
+            <Button.Triggers>
+                <DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="RANDOM">
+                    <Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+                </DataTrigger>
+            </Button.Triggers>
+        </Button>
+
+        <Button
+		    Grid.Row="2"
+		    Grid.Column="0"
+		    Margin="8,4,4,8"
+		    Command="{Binding GetCdsCommand}"
+		    IsEnabled="{Binding IsNotBusy}"
+	        Style="{StaticResource HoverButtonStyle}"
+		    Text="Show All CD's" >
+            <Button.Triggers>
+                <DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="CD">
+                    <Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+                </DataTrigger>
+            </Button.Triggers>
+        </Button>
+
+        <Button
+		    Grid.Row="2"
+		    Grid.Column="1"
+		    Margin="4,4,8,8"
+		    Command="{Binding GetFavoritesCommand}"
+		    IsEnabled="{Binding IsNotBusy}"
+		    Style="{StaticResource HoverButtonStyle}"
+		    Text="Load FAVORITES" >
+            <Button.Triggers>
+                <DataTrigger TargetType="Button"
+					Binding="{Binding SelectedButton}"
+					Value="FAVORITES">
+                    <Setter Property="Style"
+						Value="{StaticResource HoverSelectedButtonStyle}" />
+                </DataTrigger>
+            </Button.Triggers>
+        </Button>
+
+    </Grid>
+</ContentPage>

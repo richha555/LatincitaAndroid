@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net9.0-android</TargetFrameworks>
-		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows')) and '$(MSBuildRuntimeType)' == 'Full'">$(TargetFrameworks);net9.0-windows10.0.19041</TargetFrameworks>
+		<!-- Build for a single target (Android) to avoid compiling platform-specific files for iOS/Windows
+			 on machines that don't have those workloads installed. Change to TargetFrameworks and
+			 add the desired TFMs if you need multi-targeting and have the workloads. -->
+		<TargetFramework>net9.0-android</TargetFramework>
 		<OutputType>Exe</OutputType>
 		<RootNamespace>LatincitaAndroid</RootNamespace>
 		<UseMaui>true</UseMaui>
@@ -11,7 +12,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 
 		<!-- Display name -->
-		<ApplicationTitle>LatinciatAndroid</ApplicationTitle>
+		<ApplicationTitle>Latincita Android</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.latincita.android</ApplicationId>
@@ -22,6 +23,14 @@
 		
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
+
+		<!-- XamlC warning XC0025 -->
+		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+		
+		<!-- Suggestion by GEMINI -->
+		<PublishTrimmed>false</PublishTrimmed>
+		<TrimMode>partial</TrimMode>
+		<DefaultLanguage>English</DefaultLanguage>		
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -43,22 +52,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Compile Remove="Model\Monkey.cs" />
-	  <Compile Remove="Services\MonkeyService.cs" />
-	  <Compile Remove="ViewModel\MonkeyDetailsViewModel.cs" />
-	  <Compile Remove="ViewModel\MonkeysViewModel.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <MauiXaml Remove="View\DetailsPage-Backup.xaml" />
-	  <MauiXaml Remove="View\MainPageMonkey.xaml" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Remove="~%24%24Latincita Android.~vsdx" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <MauiImage Include="Resources\AppIcon\godess_latincita_postzegel.png" />
 	</ItemGroup>
 	
@@ -69,6 +62,10 @@
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="System.Text.Json" Version="10.0.1" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Folder Include="MacCatalyst\" />
 	</ItemGroup>
 
 </Project>

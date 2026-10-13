@@ -36,6 +36,40 @@ public class AllLatincitaService
 
     int num_fsongs = 0;
 
+
+    public async Task<TrackObject> get_track(PlayListItem item)
+    {
+        TrackObject empty_track = new();
+        TrackObject track = null;
+
+        int song_id = -1;
+
+        if (string.IsNullOrWhiteSpace(item.songid) || !int.TryParse(item.songid, out song_id) || song_id <= 0) {
+            return empty_track;
+        }
+
+        if ((this.AllLatincitaList == null) || (this.AllLatincitaList.Count <= 0)) {
+            await this.GetAllLatincita();
+        }
+        if ((this.AllLatincitaList == null) || (this.AllLatincitaList.Count <= 0))
+            return empty_track;
+
+        string mp3 = item.m4v;
+        if (!string.IsNullOrEmpty(mp3)) {
+            int p = mp3.LastIndexOf('/');
+            if (p >= 0) 
+                mp3 = mp3.Substring(p + 1);
+        }
+        track = this.AllLatincitaList.Values.FirstOrDefault(v => v.songid == song_id && v.mp3.Contains(mp3, StringComparison.InvariantCultureIgnoreCase));
+
+        if (track != null)
+            return track;
+
+        return empty_track;
+    }
+
+
+
     public async Task<TrackObject> get_track(RadioProgram RadioProgram)
     {
         TrackObject empty_track = new();
@@ -558,16 +592,16 @@ public class AllLatincitaService
 
                     switch (programType) {
                         case RadioProgramType.RADIO:
-                            this.RadioTrackList.Add(track.id, track);
+                            this.RadioTrackList.Add(track.id_str, track);
                             break;
                         case RadioProgramType.CD:
-                            this.CdTrackList.Add(track.id, track);
+                            this.CdTrackList.Add(track.id_str, track);
                             break;
                         case RadioProgramType.FAVORITE:
-                            this.FavoriteTrackList.Add(track.id, track);
+                            this.FavoriteTrackList.Add(track.id_str, track);
                             break;
                         default:
-                            this.AllLatincitaList.Add(track.id, track);
+                            this.AllLatincitaList.Add(track.id_str, track);
                             //                        ^^^^^^^^ we finally have REAL song-id's !!
                             this.theFsongs.Add(++this.num_fsongs, track);
                             break;

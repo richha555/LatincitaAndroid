@@ -17,10 +17,17 @@ using AndroidX.Media3.Extractor.Mp4;
 
 namespace LatincitaAndroid.Services
 {
+    public class LoadRes
+    {
+        public bool loaded { get; set; }
+        public bool already_loaded { get; set; }
+    }
     public class AudioPlaybackService
     {
         private readonly Channel<PlayListItem> _queue =
             Channel.CreateUnbounded<PlayListItem>();
+
+        public List<PlayListItem> processed_items = new();
 
         private TaskCompletionSource _resumeSignal = CreateResumeSignal(); // create initial signal
         private TaskCompletionSource _mediaOpenedTcs = CreateResumeSignal(); // create initial signal
@@ -53,6 +60,11 @@ namespace LatincitaAndroid.Services
         {
             return new TaskCompletionSource(
                 TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        public bool Have_Loaded_Track()
+        {
+            return ((this.mediaPlayer != null) && (this.CurrentPlayListItem != null));
         }
 
         public void MediaPlayer_Register(MediaElement _mediaPlayer)
@@ -119,13 +131,28 @@ namespace LatincitaAndroid.Services
 
         }
 
+        public async Task<bool> Select_Track_from_Queue(TrackObject track)
+        {
+            bool was_paused = this._isPaused;
+
+            bool found_id = await this.ScollDown_To_Track(track);
+
+            if (found_id) {
+                if (was_paused) {
+                    this.ResumeQueue();
+                }
+            }
+            return found_id;
+        }
+
         public async Task<bool> Select_Track_from_TrackList(TrackObject track)
         {
             bool ret = false;
 
             PlayListItem pitem = CurrentPlayListItem;
 
-            if ((int.Parse(track.id) != pitem.id) && (track.radioid != int.Parse(pitem.songid))) {
+            if ((track.id_str != pitem.track.id_str) && 
+                (track.radioid != pitem.track.songid)) {  // pitem should point to entire RADIO, track might be a TRACK
                 Debug.WriteLine(String.Format("AudioPlaybackService::Select_Track_from_TrackList: requested different track then loaded track"));
                 return false;
             }
@@ -229,9 +256,11 @@ namespace LatincitaAndroid.Services
                 this.ResumeQueue();
             }
         }
-        public async Task ScollDown_ToID(int id)
+        public async Task<bool> ScollDown_To_Track(TrackObject track)
         {
-            Debug.WriteLine($"| AudioPlaybackService::ScollDown_ToID({id})");
+            Debug.WriteLine($"| AudioPlaybackService::ScollDown_ToID({track.id_str})");
+
+            bool found_id = false;
 
             bool was_paused = this._isPaused;
 
@@ -239,18 +268,20 @@ namespace LatincitaAndroid.Services
                 this.PauseQueue();
             }
 
-            int id0 = -9999;
-            PlayListItem track = null;
-            while (this._queue.Reader.TryPeek(out track)) {
-                if (track == null) {
+            string id0 = "";
+            PlayListItem _item = null;
+            while (this._queue.Reader.TryPeek(out _item)) {
+                if (_item == null) {
                     continue;
                 }
-                if (track.id == id) {
+            //if ((track.id_str != pitem.track.id_str) && (track.radioid != pitem.track.songid)) {
+                if ((_item.track.id_str == track.id_str) || (track.radioid == _item.track.songid)) {
+                    found_id = true;
                     break; // leave desired track @ bottom of queue
                 }
-                if (id0 == -9999) {
-                    id0 = track.id;
-                } else if (track.id == id0) {
+                if (id0 == "") {
+                    id0 = _item.track.id_str;
+                } else if (_item.track.id_str == id0) {
                     break; // looped around
                 }
                 var track2 = await this._queue.Reader.ReadAsync(); // pop bottom track
@@ -262,10 +293,13 @@ namespace LatincitaAndroid.Services
             if (!was_paused) {
                 this.ResumeQueue();
             }
+            return found_id;
         }
         public async void ClearQueue()
         {
             Debug.WriteLine("| AudioPlaybackService::ClearQueue");
+
+            this.processed_items.Clear();  // clearing queue, also clear history
 
             bool was_paused = this._isPaused;
 
@@ -292,6 +326,24 @@ namespace LatincitaAndroid.Services
                 this.ResumeQueue();
             }
         }
+        public async Task<bool> Replay_Past_Item(TrackObject track)
+        {
+            bool found_id = false;
+            foreach (PlayListItem _item in this.processed_items) {
+                if ((_item.track.id_str == track.id_str) || (track.radioid == _item.track.songid)) {
+                    found_id = true;
+
+                    this.PauseUntilSongEnds();  // processing paused until current song ends
+
+                    bool loaded = await this.PlayTrackAsync(_item);
+
+                    if (!loaded) {
+                        this.ResumeAfterSongEnds();
+                    }
+                }
+            }
+            return found_id;
+        }
         private async Task ProcessQueueAsync()
         {
             Debug.WriteLine("| AudioPlaybackService::ProcessQueueAsync");
@@ -311,6 +363,8 @@ namespace LatincitaAndroid.Services
                 if (track == null) {
                     continue;
                 }
+
+                this.processed_items.Add(track);
 
                 this.PauseUntilSongEnds();  // processing paused until current song ends
 
@@ -344,9 +398,13 @@ namespace LatincitaAndroid.Services
 
             _mediaOpenedTcs = CreateResumeSignal(); // create a new signal before loading track.  signal should arrive before Load_Track returns
 
-            bool loaded = await Load_Track(track);
+            LoadRes loadres = await Load_Track(track);
 
-            if (loaded) {
+            if (!loadres.loaded || loadres.already_loaded) {
+                _mediaOpenedTcs?.TrySetResult();  // clear loading-track signal, it will never arrive
+            }
+
+            if (loadres.loaded) {
 
                 await _mediaOpenedTcs.Task; // wait until player loads track
 
@@ -356,14 +414,19 @@ namespace LatincitaAndroid.Services
             // have to wait for track to end
             // returning auto fetches next track
 
-            return loaded;
+            return loadres.loaded;
         }
-        public async Task<bool> Load_Track(PlayListItem track)
+        public async Task<LoadRes> Load_Track(PlayListItem track)
         {
             Debug.WriteLine($"| AudioPlaybackService::Load_Track({track.title})");
 
+            LoadRes loadres = new LoadRes();
+
+            loadres.already_loaded = false;
+            loadres.loaded = false;
+
             if (track == null) {
-                return false;
+                return loadres;
             }
             string url = track.m4v;
             bool auto_play = track.entireRadio;
@@ -371,12 +434,12 @@ namespace LatincitaAndroid.Services
             Debug.WriteLine($"| >>> AudioPlaybackService:Load_URL({url},{auto_play})");
 
             if (String.IsNullOrWhiteSpace(url)) {
-                return false;
+                return loadres;
             }
 
             if (this.mediaPlayer == null) { // && media_player_ready <<< media-player not calling MediaPlayer_Loaded on Android
                 Debug.WriteLine($"| >>> page/player not ready - regretfully ignoring laod command");
-                return false;
+                return loadres;
             }
             url = HttpUtility.UrlDecode(url);  // ChatGPT says undo url encoding
 
@@ -397,17 +460,17 @@ namespace LatincitaAndroid.Services
             //    Reset_Play_Buttons();  // would have to first call w/ empty URL to get us to reset play buttons
             //}
 
-            bool media_loaded = false;
-
             this.auto_play_source = null;
 
             try {
                 await PlayUrlAsync(url, url_unchanged, auto_play);
-                media_loaded = true;
+
+                loadres.loaded = true;
+                loadres.already_loaded = url_unchanged; // we told PlayUrlAsync that mediaPlayer.Source == url
             } catch (Exception ex) {
                 await Shell.Current.DisplayAlert("Media Load error", "Unable to load {url}", "OK");
             }
-            return media_loaded;
+            return loadres;
         }
 
         public Task PlayUrlAsync(string url, bool url_unchanged, bool auto_play)

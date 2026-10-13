@@ -241,9 +241,9 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="model:VisibleTrackObject">
                             <!--      Class="{Binding background_class, Converter={StaticResource StyleClassConverter}}" -->
+                            <!--BackgroundColor="{StaticResource DefaultRowStyle}"-->
                             <Grid ColumnDefinitions="60,*"
                                   Padding="0"
-                                  BackgroundColor="{StaticResource DefaultRowStyle}"
                                   ColumnSpacing="12">
                                 <Grid.Triggers>
                                     <DataTrigger

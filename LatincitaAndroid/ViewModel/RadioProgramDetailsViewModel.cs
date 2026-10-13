@@ -1,7 +1,6 @@
 ﻿using System.Buffers.Text;
 using System.Globalization;
 using System.Windows.Input;
-using AndroidX.Lifecycle;
 using CommunityToolkit.Maui.Views;
 using LatincitaAndroid.Services;
 
@@ -168,6 +167,10 @@ public partial class RadioProgramDetailsViewModel : BaseViewModel
             RadioProgramType type = this.ProgramListService.CurrentType;
             if (type == RadioProgramType.RANDOM) {
                 await GetRandomAsync();
+            } else {
+                // this should see that we are on the last track and
+                // automatically move to the first track
+                await this.GoTo_Next_Track();
             }
         }
     }

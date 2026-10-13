@@ -120,6 +120,9 @@ public partial class ProgramListService : ObservableObject
     [ObservableProperty]
     private bool hasLine3;
 
+    [ObservableProperty]
+    private bool isRandom;
+
     AllLatincitaService AllLatincitaService;
     AudioPlaybackService AudioPlaybackService;
 
@@ -130,6 +133,11 @@ public partial class ProgramListService : ObservableObject
         this.AllLatincitaService = AllLatincitaService;
         this.AudioPlaybackService = AudioPlaybackService;
 
+        HasLine1 = false;
+        HasLine2 = false;
+        HasLine3 = false;
+        IsRandom = false;
+
         CurrentTrackListNotEmpty = ((CurrentTrackList != null) && (CurrentTrackList.Count > 0));
         StartPosition = 0;
         EndPosition = 0;
@@ -138,7 +146,7 @@ public partial class ProgramListService : ObservableObject
     public async void Set_Current_Track(TrackObject track)
     {
         foreach (VisibleTrackObject titem in CurrentVisibleTrackList) {
-            if (titem.my_track.id == track.id) {
+            if (titem.my_track.id_str == track.id_str) {
                 titem.IsCurrentRow = true;
                 titem.Background_class = "HighlightedRowStyle";
             } else {
@@ -185,6 +193,8 @@ public partial class ProgramListService : ObservableObject
         HasLine1 = false;
         HasLine2 = false;
         HasLine3 = false;
+
+        IsRandom = (program.Type == RadioProgramType.RANDOM);
 
         Mp3Url = "";
 
@@ -265,7 +275,7 @@ public partial class ProgramListService : ObservableObject
 
             _track = await AllLatincitaService.get_track(program);  // MP3 w/ entire radio or selected RANDOM
 
-            if (_track is null || _track.id == "") {
+            if (_track is null || _track.id_str == "") {
                 return;
             }
         }
@@ -279,7 +289,7 @@ public partial class ProgramListService : ObservableObject
             // when someone selects a RADIO we load all the tracks on this radio to the CurrentTrackList
 
             // set track to entire show, let addToPlaylist handle cuing up first track
-            if (_track is null || _track.id == "") {
+            if (_track is null || _track.id_str == "") {
                 if (CurrentTrackList != null && CurrentTrackList.Count > 0) {
                     _track = CurrentTrackList[0];  // set current track to first track on show
                 }
@@ -301,9 +311,9 @@ public partial class ProgramListService : ObservableObject
 
             foreach (var prog in this.RadioPrograms) {
                 var _t = await AllLatincitaService.get_track(prog);
-                if (_t.id != "") {
+                if (_t.id_str != "") {
                     tlist.Add(_t);
-                    if (_t.id == _track.id) {
+                    if (_t.id_str == _track.id_str) {
                         // this is our track
                     } else {
                         // this is a previous/next random track
@@ -324,7 +334,7 @@ public partial class ProgramListService : ObservableObject
                 // have a _track.track_list with a list of the offsets on this radio
                 // we push this single _track to the AudioPlaybackService's queue
 
-                if (_track != null && !String.IsNullOrWhiteSpace(_track.id)) {
+                if (_track != null && !String.IsNullOrWhiteSpace(_track.id_str)) {
 
                     PlayListItem _playListItem = await addToPlaylist(_track, wmaTyp.cMusic);
 
@@ -334,7 +344,12 @@ public partial class ProgramListService : ObservableObject
 
                     foreach (TrackObject track in this.CurrentTrackList) {
                         track.cached_playlist_item = _playListItem;  // point all tracks to this single playlist item
+                                                                     // _playListItem.track_list contains the list of tracks on the radio
+                                                                     // each item on CurrentTrackList needs to point to an 
+                                                                     // item in _playListItem.track_list
                     }
+
+                    _track = this.CurrentTrackList[0];  // highlight 1st track on show
                 }
 
             } else if (program.Type == RadioProgramType.CD) {
@@ -365,8 +380,8 @@ public partial class ProgramListService : ObservableObject
 
                 //PlayListItem _item = await addToPlaylist(_track, wmaTyp.cMusic);  // should find track on myPlaylist and just return it
 
-                if (_item != null && _item.id > 0) {
-                    await this.AudioPlaybackService.ScollDown_ToID(_item.id);  // scroll down so selected RANDOM is at the bottom of the queue
+                if (_item != null && _item.track != null) {
+                    await this.AudioPlaybackService.ScollDown_To_Track(_item.track);  // scroll down so selected RANDOM is at the bottom of the queue
                 }
 
                 this.AudioPlaybackService.ResumeQueue();
@@ -569,19 +584,23 @@ public partial class ProgramListService : ObservableObject
 
         RadioProgram radioProgram = new();
 
-        radioProgram.ID = _Random.id;
+        if (_Random.track == null) {
+            _Random.track = await AllLatincitaService.get_track(_Random);
+        }
+
+        radioProgram.ID = _Random.track.songid;  // *** would rather use id_str, but this is 524.03
         radioProgram.ArticleTitle = _Random.title;
         radioProgram.MP3URL = _Random.m4v;
         radioProgram.PictureURL = _Random.image.ImageFullURL;
     //  radioProgram.RecordedOn = ???   .... Random does not provide date !
 
-        TrackObject _track = await AllLatincitaService.get_track(radioProgram);
+        TrackObject _track0 = await AllLatincitaService.get_track(radioProgram);
 
         DateTime recorded_on = DateTime.MinValue;
 
-        if ((_track != null) && !string.IsNullOrWhiteSpace(_track.month_year)) {
+        if ((_track0 != null) && !string.IsNullOrWhiteSpace(_track0.month_year)) {
             recorded_on = DateTime.ParseExact(
-                            _track.month_year,
+                            _track0.month_year,
                             "MMMM yyyy",
                             CultureInfo.GetCultureInfo("en-US"), DateTimeStyles.None);
         }
@@ -589,6 +608,11 @@ public partial class ProgramListService : ObservableObject
         radioProgram.RecordedOn = recorded_on;
 
         radioProgram.Type = RadioProgramType.RANDOM;
+
+        // and congradulations, by converting a PlayListItem which had a track_list with one item
+        // to a RadioProgram, we just threw out all the TRACK info
+        // the only thing that can save us is that radioProgram.ID is a songid
+        // which should allow us to find the TRACK
 
         await Task.Run(() =>
         {
@@ -614,7 +638,7 @@ public partial class ProgramListService : ObservableObject
 
         if (type == RadioProgramType.RADIO) {
             // if this is a RADIO, we need to find the next-track and seek to its offset
-            if (!String.IsNullOrWhiteSpace(next_track.id)) {
+            if (!String.IsNullOrWhiteSpace(next_track.id_str)) {
 
                 if (isPlaying) {
                     await this.AudioPlaybackService.SeekAsync(next_track.offset);
@@ -628,6 +652,8 @@ public partial class ProgramListService : ObservableObject
 
             // if this is a RANDOM and the queue is empty,
             //    we need to fetch a new RANDOM, add it to the CurrentTrackList and push it onto the Queue
+
+            await this.AudioPlaybackService.Select_Track_from_Queue(next_track);
         }
         return the_track;
     }
@@ -646,7 +672,7 @@ public partial class ProgramListService : ObservableObject
 
         if (type == RadioProgramType.RADIO) {
             // if this is a RADIO, we need to find the previous-track and seek to its offset
-            if (!String.IsNullOrWhiteSpace(prev_track.id)) {
+            if (!String.IsNullOrWhiteSpace(prev_track.id_str)) {
                 if (isPlaying) {
                     await this.AudioPlaybackService.SeekAsync(prev_track.offset);
                 } else {
@@ -657,6 +683,18 @@ public partial class ProgramListService : ObservableObject
             // if this is not a radio
             // we need to figure out what the previous item was on the queue.
             // actually we probably want to go to the playlist and somehow load the previous item on the playlist
+
+            // item we want is most likely simething that the AudioPlaybackService already took off of the queue
+            // and played
+
+            bool found_item = await this.AudioPlaybackService.Replay_Past_Item(prev_track);
+
+            // only if it's not one of the items poped off of the queue, do we want to try scrolling through the queue
+            // looking for the item.
+
+            if (!found_item) {
+                await this.AudioPlaybackService.Select_Track_from_Queue(prev_track);
+            }
         }
         return the_track;
     }
@@ -666,11 +704,11 @@ public partial class ProgramListService : ObservableObject
         TrackObject curr_track = this.CurrentTrack;
         TrackObject next_track = new();
 
-        Boolean found_curr = String.IsNullOrWhiteSpace(curr_track.id) ? true : false; // if no current, return first track
+        Boolean found_curr = String.IsNullOrWhiteSpace(curr_track.id_str) ? true : false; // if no current, return first track
 
         foreach (TrackObject _tt in this.CurrentTrackList) {
             if (_tt != null) {
-                if (_tt.id == curr_track.id && _tt.offset == curr_track.offset) {
+                if (_tt.id_str == curr_track.id_str && _tt.offset == curr_track.offset) {
                     found_curr = true;
                 } else {
                     if (found_curr) {
@@ -687,11 +725,11 @@ public partial class ProgramListService : ObservableObject
         TrackObject curr_track = this.CurrentTrack;
         TrackObject prev_track = new();
 
-        Boolean found_curr = String.IsNullOrWhiteSpace(curr_track.id) ? true : false;  // if no current, return first track
+        Boolean found_curr = String.IsNullOrWhiteSpace(curr_track.id_str) ? true : false;  // if no current, return first track
 
         foreach (TrackObject _tt in this.CurrentTrackList) {
             if (_tt != null) {
-                if (_tt.id == curr_track.id && _tt.offset == curr_track.offset) {
+                if (_tt.id_str == curr_track.id_str && _tt.offset == curr_track.offset) {
                     found_curr = true;
                 } else {
                     if (found_curr) {
@@ -733,7 +771,7 @@ public partial class ProgramListService : ObservableObject
         foreach (TrackObject _tt in this.CurrentTrackList) {
             if (_tt != null) {
                 is_last = false;
-                if (_tt.id == track.id && _tt.offset == track.offset) {
+                if (_tt.id_str == track.id_str && _tt.offset == track.offset) {
                     is_last = true;
                 }
             }
@@ -745,7 +783,7 @@ public partial class ProgramListService : ObservableObject
         Boolean is_first = false;
         foreach (TrackObject _tt in this.CurrentTrackList) {
             if (_tt != null) {
-                if (_tt.id == track.id && _tt.offset == track.offset) {
+                if (_tt.id_str == track.id_str && _tt.offset == track.offset) {
                     is_first = true;
                 }
                 break;
@@ -862,7 +900,9 @@ public partial class ProgramListService : ObservableObject
 
     public async Task<PlayListItem> addToPlaylist(TrackObject track, wmaTyp useWma)
     {
-        PlayListItem PlayListItem = new();
+        PlayListItem PlayListItem = null;
+
+        //  PlayListItem.track = track; ... haldled when PlayListItem is created
 
         Dictionary<int, TrackObject> theFsongs = await AllLatincitaService.GetFsongs();
 
@@ -875,7 +915,7 @@ public partial class ProgramListService : ObservableObject
 
         int n = 0;
         for (int i2 = 1; i2 <= num_fsongs; i2++) {
-            if (theFsongs[i2].id == track.id) {
+            if (theFsongs[i2].id_str == track.id_str) {
                 if (theFsongs[i2].mp3 == track.mp3) {
                     n = i2;
                     break;
@@ -883,7 +923,7 @@ public partial class ProgramListService : ObservableObject
             }
         }
         if (n <= 0) {
-            Debug.WriteLine($"| ERROR: track id {track.id} [{track.mp3}] not found in theFsongs");
+            Debug.WriteLine($"| ERROR: track id {track.id_str} [{track.mp3}] not found in theFsongs");
             return null;
         }
 
@@ -916,35 +956,41 @@ public partial class ProgramListService : ObservableObject
             } else {
                 n = songidx;  // queue up radio "n"  &  request track "trackidx"
             }
-            if (theFsongs[trackidx].is_track_object(CurrentType) == true) {
-                playing_track = true;
-            }
+            //if (theFsongs[trackidx].is_track_object(CurrentType) == true) {
+            //    playing_track = true;
+            //}
         } else if (useWma == wmaTyp.cMusic) {
             //                     in the past,playing an entire show highlighted tracks as they were played
             //                     as of Feb 2021, this no longer happens !!!   Try seeing if passing a track_list fixes this...
             //  ------------------ song[n] is not a track, but it could be a radio
-            var track_num = -1;
+            var _track_num = -1;
             for (var i = 1; i <= num_fsongs; i++) {
                 if ((theFsongs[i].is_track == true) && (theFsongs[i].tracknum > 0)) {
-                    if (theFsongs[i].radioid == theFsongs[n].songid) {
+                    if (theFsongs[i].radioid == theFsongs[n].songid) {  // true if n is an entire radio
+                    //  found one track that points to the song we have been asked to play
                     //  if (radioid > 0) {
                         if (radioid <= 0) {
                             radioid = theFsongs[n].songid; // selected track IS a RADIO show
                             songidx = n;
                         }
-                        if ((trackidx < 0) || (theFsongs[i].tracknum < track_num)) {
+                        if (((trackidx < 0) || (theFsongs[i].tracknum < _track_num)) && (theFsongs[i].tracknum > 0)) {
                             trackidx = i;  // select the 1st [visible]] track
-                            track_num = theFsongs[i].tracknum;
-                            if (theFsongs[trackidx].is_track_object(CurrentType) == true) {
-                                playing_track = true;
-                            }
+                            _track_num = theFsongs[i].tracknum;
+                            //if (theFsongs[trackidx].is_track_object(CurrentType) == true) {
+                            //    playing_track = true;
+                            //}
                         }
                     }
                 }
             }
-            if (playing_track) {
-                trackidx = -1;  // deselect 1st track & just play entire show
-            }
+            //if (playing_track) {
+            //    trackidx = -1;  // deselect 1st track & just play entire show
+            //}
+        }
+        var track_num = -1;
+        if (trackidx > 0) {
+            track_num = theFsongs[trackidx].tracknum;
+            playing_track = true;
         }
 
         string tmedia = theFsongs[n].mp3s[(int)useWma];
@@ -955,13 +1001,13 @@ public partial class ProgramListService : ObservableObject
         //  tmedia_fav = Curr_Favorite(n, useWma);
 
         var already_added = false;
-        var found_id = -1;
-        var playlist_idx = -1;
-        var track_to_play = -1;
+        var found_id = -1;       // theFsongs[found_id] is item found on myPlaylist
+        var playlist_idx = -1;   // myPlaylist[playlist_idx] contains track "trackidx"
+        var track_to_play = -1;  // myPlaylist[playlist_idx].track_list[track_to_play] is track to start playing
 
         if ((trackidx >= 0) && (trackidx != n)) {
             for (var j = 0; j < this.myPlaylist.Count; j++) {
-                if ((this.myPlaylist[j].id == trackidx) && (this.myPlaylist[j].useWma == (int)useWma)) {
+                if ((this.myPlaylist[j].track?.id_str == theFsongs[trackidx].id_str) && (this.myPlaylist[j].useWma == (int)useWma)) {
                     already_added = true;  // already have this track
                     found_id = trackidx;
                     playlist_idx = j;
@@ -970,15 +1016,15 @@ public partial class ProgramListService : ObservableObject
             }
             // if we don't find track, go back and see if we can find track's radio and see if it already has this track
             for (var j = 0; j < this.myPlaylist.Count; j++) {
-                if (myPlaylist[j].songid == radioid.ToString()) {
+                if (myPlaylist[j].track?.songid == radioid) {
                     var toffs = theFsongs[trackidx].offset;
                     var tlist = myPlaylist[j].track_list;
                     for (var tt = 0; tt < tlist.Count; tt++) {
                         if (tlist[tt].offs == toffs) {
                             already_added = true;  // already have this track
-                            found_id = myPlaylist[j].id;
+                            found_id = trackidx; //  myPlaylist[j].id;
                             playlist_idx = j;
-                            track_to_play = tt + 1;
+                            track_to_play = tt;
                             break;
                         }
                     }
@@ -987,7 +1033,7 @@ public partial class ProgramListService : ObservableObject
         }
         if (found_id < 0) {
             for (var j = 0; j < myPlaylist.Count; j++) {
-                if ((myPlaylist[j].id == n) && (myPlaylist[j].useWma == (int)useWma)) {
+                if ((this.myPlaylist[j].track?.id_str == theFsongs[n].id_str) && (myPlaylist[j].useWma == (int)useWma)) {
                     already_added = true;  // already have this one
                     found_id = n;
                     playlist_idx = j;
@@ -1005,10 +1051,11 @@ public partial class ProgramListService : ObservableObject
             if (playing_track) {
                 // playing a track on RADIO/BANDS, find all the other tracks from the same show  >>> *** NOTE: give player all the tracks, but tell it to only play the one selected
                 if (useWma == wmaTyp.cMusic) {
-                    if (trackidx < 0) {
+                    if ((trackidx < 0) || (track.is_track == false)) {  // RADIO: trackidx should already point to 1st track
+                        // add all tracks on RADIO to track_list
                         for (var i = num_fsongs; i >= 1; i--) {
                             if ((theFsongs[i].is_track == true) && (theFsongs[i].radioid == theFsongs[n].songid)) {
-                                var track_num = theFsongs[i].tracknum;
+                            //  var track_num = theFsongs[i].tracknum;
                                 var track_obj = new TrackListItem
                                 {
                                     offs = theFsongs[i].offset,
@@ -1043,7 +1090,7 @@ public partial class ProgramListService : ObservableObject
                         }
                     } else {
                         // if one track was selected, only add that one track to track-list
-                        var track_num = theFsongs[trackidx].tracknum;
+                    //  var track_num = theFsongs[trackidx].tracknum;
                         var track_obj = new TrackListItem {
                             offs = theFsongs[trackidx].offset,
                             nxtoffs = theFsongs[trackidx].nxtoffset,
@@ -1076,7 +1123,8 @@ public partial class ProgramListService : ObservableObject
                             trackid = trackidx
                         };
                         track_list.Add(track_obj);
-                        tnum++;
+                        tnum = 0;
+                        // tnum++;
                         //  track_to_play = 1;
                         track_to_play = tnum;
                     }
@@ -1193,7 +1241,7 @@ public partial class ProgramListService : ObservableObject
             //            image: { }
             //    }, play_now);     //                               vvvv - before 8.75, only did this when playing_track was false
             //} else 
-            if ((trackidx >= 0) && (trackidx != n)) { // && (playing_track === false)) {
+            if ((trackidx >= 0) && (trackidx != n) && (track.is_track == true)) { // && (playing_track === false)) {
                 // *** could try to see if another track from this show is already added and just add this track to the list of tracks
                 //     but for now, just queue up the track
                 added_id = trackidx;
@@ -1208,16 +1256,18 @@ public partial class ProgramListService : ObservableObject
                     poster = theFsongs[trackidx].photo,
                     useWma = (int)useWma,
                     entireRadio = entire_radio,
-                    songid = theFsongs[trackidx].songid.ToString(),
-                    id = trackidx,
+                //  we now reference all other properties via PlayListItem.track
+                //  songid = theFsongs[trackidx].songid.ToString(),
+                //  id = trackidx,
                     track_list = track_list //,
                     //video_list = video_list,
                     //image = { }
                 };
+                track_obj.track = track;
                 myPlaylist.Add(track_obj); // , play_now);
                 playlist_idx = myPlaylist.Count - 1;
             } else {
-                entire_radio = playing_track && (trackidx < 0);
+                entire_radio = playing_track && ((trackidx < 0) || (track.is_track == false));
                 added_id = n;
                 added_photo = theFsongs[n].photo;
                 var track_obj = new PlayListItem
@@ -1230,12 +1280,14 @@ public partial class ProgramListService : ObservableObject
                     poster = theFsongs[n].photo,
                     useWma = (int)useWma,
                     entireRadio = entire_radio,
-                    songid = theFsongs[n].songid.ToString(),
-                    id = n,
+                //  we now reference all other properties via PlayListItem.track
+                //  songid = theFsongs[trackidx].songid.ToString(),
+                //  id = trackidx,
                     track_list = track_list //,
                     //video_list = video_list,
                     //image = { }
                 };
+                track_obj.track = track;
                 myPlaylist.Add(track_obj); // , play_now);
                 playlist_idx = myPlaylist.Count - 1;
             }
@@ -1261,32 +1313,37 @@ public partial class ProgramListService : ObservableObject
             //    selIds = selIds + theFsongs[added_id].songid + "|";
             //}
         }
-        if ((already_added) && (track_to_play < 0) && !this.isPlaying) {
-            if (found_id < 0) found_id = n;
-            // TODO: skip this when adding all
-            for (var j = 0; j < myPlaylist.Count; j++) {
-                if ((myPlaylist[j].id == found_id) && (myPlaylist[j].useWma == (int)useWma)) {
-                //  if (!isPlaying()) {
-                    //   setTimeout(function() {
-                    //                  myPlaylist.select(j);
-                    //              }, removeWait); // give myPlaylist.remove(j) time to get processed
-                //  }
-                    break;
-                }
-            }
-        } else {
-            // only add to list, don't change current selection, and certainly don't stop something if it's playing
-        }
 
-        if ((track_to_play >= 0) && !this.isPlaying) {
-        //  setTimeout(function() { myPlaylist.play_track(track_to_play); }, removeWait);
-        }
+        // found_id        // theFsongs[found_id] is item found on myPlaylist
+        // playlist_idx    // myPlaylist[playlist_idx] contains track "trackidx"
+        // track_to_play   // myPlaylist[playlist_idx].track_list[track_to_play] is track to start playing
+
+        //if ((already_added) && (track_to_play < 0) && !this.isPlaying) {
+        //    if (found_id < 0) found_id = n;
+        //    // TODO: skip this when adding all
+        //    for (var j = 0; j < myPlaylist.Count; j++) {
+        //        if ((myPlaylist[j].id == found_id) && (myPlaylist[j].useWma == (int)useWma)) {
+        //                //  if (!isPlaying()) {
+        //                //   setTimeout(function() {
+        //                //                  myPlaylist.select(j);
+        //                //              }, removeWait); // give myPlaylist.remove(j) time to get processed
+        //                //  }
+        //                break;
+        //        }
+        //    }
+        //} else {
+        //    // only add to list, don't change current selection, and certainly don't stop something if it's playing
+        //}
+
+        //if ((track_to_play >= 0) && !this.isPlaying) {
+        ////  setTimeout(function() { myPlaylist.play_track(track_to_play); }, removeWait);
+        //}
 
         if (playlist_idx >= 0) {
             PlayListItem = this.myPlaylist[playlist_idx];
         }
 
-        return PlayListItem;
+        return PlayListItem;  // also need to return track_to_play !!!
     }
 
     private bool IsSameMediaUrlIgnoringDomain(MediaSource source, string newUrl)

@@ -12,4 +12,7 @@
 
 	<Color x:Key="LabelText">#1F1F1F</Color>
 	<Color x:Key="LabelTextDark">White</Color>
+<!--Microsoft removed this definition-->
+    <Color x:Key="Gray200">#C8C8C8</Color>
+
 </ResourceDictionary>

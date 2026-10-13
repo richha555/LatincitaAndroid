@@ -157,10 +157,10 @@ public class TrackObject
     //    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     //}
 
-    public string id { get; set; } = "";    // 526.01   ... if csv.TrackNumber > 0 then
-                                            //                   id = csv.RadioID + "." + csv.TrackNumber
-                                            //                   csv.SongID 1821 : RadioID: 526  TrackNumber: 1  => id = 526.01
-                                            //              else   id = csv.SongID
+    public string id_str { get; set; } = "";    // 526.01   ... if csv.TrackNumber > 0 then
+                                                //                   id = csv.RadioID + "." + csv.TrackNumber
+                                                //                   csv.SongID 1821 : RadioID: 526  TrackNumber: 1  => id = 526.01
+                                                //              else   id = csv.SongID
     public string display_name { get; set; } = "";  // 
     public string boxid { get; set; } = "";
     public int songid { get; set; } = -1;
@@ -247,7 +247,7 @@ public class TrackObject
     {
         this.offs_lookup = _offs_lookup;
 
-        this.id = csv.SongID < 0 ? "" : string.Format("{0}", csv.SongID);
+        this.id_str = csv.SongID < 0 ? "" : string.Format("{0}", csv.SongID);
         this.boxid = csv.BoxID;
         this.songid = csv.SongID;
         this.radioid = csv.RadioID;
@@ -322,18 +322,18 @@ public class TrackObject
         if (this.is_track) {
             if ((this.radioid > 0) && (this.tracknum > 0)) {
                 double songid_num = 0.0;
-                if (!double.TryParse(this.id, out songid_num)) {
+                if (!double.TryParse(this.id_str, out songid_num)) {
                     songid_num = 0.0;
                 }
                 if ((songid_num > 1000) && (songid_num < 3000)) {
                     // songid was already collision proofed by caller (see CollectioLoader::Bind_SongItom)
                 } else {
-                    this.id = string.Format("{0:0}.{1:00}", this.radioid, this.tracknum);
+                    this.id_str = string.Format("{0:0}.{1:00}", this.radioid, this.tracknum);
                 }
             }
         } else {
             double songid_num2 = 0.0;
-            if (!double.TryParse(this.id, out songid_num2)) {
+            if (!double.TryParse(this.id_str, out songid_num2)) {
                 songid_num2 = 0.0;
             }
             if ((songid_num2 > 1000) && (songid_num2 < 3000)) {
@@ -344,7 +344,7 @@ public class TrackObject
         if (!string.IsNullOrWhiteSpace(this.month_year)) {
             dname += " [" + this.month_year + "]";
         }
-        dname += " (#" + this.id + ") ";
+        dname += " (#" + this.id_str + ") ";
         this.display_name = dname;
     }
     public int next_Offset()
